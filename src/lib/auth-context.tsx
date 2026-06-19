@@ -33,16 +33,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false)
   }, [])
 
-  async function login(email: string, _password: string): Promise<boolean> {
-    console.debug('login attempt:', email, _password)
-    const users = JSON.parse(localStorage.getItem('incluedu_users') || '[]')
-    const found = users.find((u: User) => u.email === email)
-    if (found) {
-      setUser(found)
-      localStorage.setItem('incluedu_user', JSON.stringify(found))
-      return true
+  async function login(identity: string, password: string): Promise<boolean> {
+    if (!identity.trim() || !password.trim()) return false
+
+    const savedUsers = JSON.parse(localStorage.getItem('incluedu_users') || '[]') as User[]
+    const registeredUser = savedUsers.find((item) => item.email.toLowerCase() === identity.trim().toLowerCase())
+    const displayName = identity.includes('@')
+      ? identity.split('@')[0].replace(/[._-]+/g, ' ')
+      : identity.trim()
+    const demoUser: User = registeredUser ?? {
+      id: crypto.randomUUID(),
+      nama: displayName || 'Guru IncluEdu',
+      email: identity.includes('@') ? identity.trim() : `${identity.trim().replace(/\s+/g, '.').toLowerCase()}@demo.incluedu`,
     }
-    return false
+
+    setUser(demoUser)
+    localStorage.setItem('incluedu_user', JSON.stringify(demoUser))
+    return true
   }
 
   async function register(nama: string, email: string, _password: string, sekolah?: string): Promise<boolean> {

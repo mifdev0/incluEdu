@@ -20,7 +20,7 @@ export default function LoginPage() {
     const ok = await login(email, password)
     setLoading(false)
     if (ok) router.push('/dashboard')
-    else setError('Email atau password salah. Silakan daftar terlebih dahulu.')
+    else setError('Isi nama atau email dan kata sandi untuk melanjutkan.')
   }
 
   return (
@@ -33,7 +33,7 @@ export default function LoginPage() {
 
         <div className="bg-surface rounded-3xl p-5 sm:p-8 border border-outline-variant/20 hard-shadow">
           <h2 className="font-headline-sm text-headline-sm text-on-surface mb-1">Selamat datang kembali</h2>
-          <p className="text-on-surface-variant font-body-md text-body-md mb-6">Masuk untuk melanjutkan.</p>
+          <p className="text-on-surface-variant font-body-md text-body-md mb-6">Mode demo: isi identitas dan kata sandi apa saja untuk masuk.</p>
 
           {error && (
             <div className="bg-error-container text-on-error-container text-sm rounded-full px-5 py-3 mb-4 font-body-md">{error}</div>
@@ -41,13 +41,13 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Email</label>
+              <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Nama atau Email</label>
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low"
-                placeholder="guru@sekolah.ac.id"
+                placeholder="Contoh: Ibu Rina"
                 required
               />
             </div>
@@ -71,9 +71,8 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-on-surface-variant font-body-md text-body-md text-center mt-6">
-            Belum punya akun?{' '}
-            <a href="/register" className="text-primary font-semibold hover:underline">Daftar</a>
+          <p className="text-on-surface-variant text-sm text-center mt-6">
+            Tidak perlu membuat akun terlebih dahulu.
           </p>
         </div>
       </div>
