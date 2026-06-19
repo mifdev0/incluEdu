@@ -1,4 +1,4 @@
-import { ClipboardList, Bot, FileText, ArrowRight, Check, Target, BookOpen, BarChart3 } from 'lucide-react'
+import { ClipboardList, Bot, FileText, ArrowRight, Check, Target, BookOpen, BarChart3, ChevronRight } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 
 export default function Home() {
@@ -69,8 +69,7 @@ export default function Home() {
           <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-lg items-start">
             <div className="lg:sticky lg:top-32">
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-sm font-bold text-primary">01</span>
-                <span className="h-px w-12 bg-primary/40" />
+                <span className="h-px w-12 bg-primary" />
                 <span className="text-sm font-bold uppercase tracking-[0.14em] text-on-surface-variant">Cara kerja</span>
               </div>
               <h2 className="font-display text-[32px] leading-tight md:text-display-lg text-on-surface mb-md">
@@ -137,71 +136,68 @@ export default function Home() {
         {/* Product workflow */}
         <section className="bg-[#241A36] py-14 sm:py-xl text-white" id="tentang">
           <div className="max-w-container-max mx-auto px-4 sm:px-gutter">
-            <div className="grid lg:grid-cols-[0.7fr_1.3fr] gap-8 lg:gap-lg">
-              <div>
-                <span className="text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Yang dikelola di IncluEdu</span>
-                <h2 className="font-display text-[30px] leading-tight sm:text-display-lg-mobile mt-3">
-                  Bukan sekadar mencatat. Setiap data punya tujuan.
-                </h2>
-                <p className="mt-4 text-white/65 leading-relaxed max-w-md">
-                  Setiap bagian saling terhubung dari perencanaan PPI sampai laporan yang dapat dibaca orang tua.
-                </p>
-              </div>
+            <div className="max-w-2xl">
+              <span className="text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Satu siklus pendampingan</span>
+              <h2 className="font-display text-[30px] leading-tight sm:text-display-lg-mobile mt-3">
+                Dari kebutuhan siswa menuju langkah yang bisa dilakukan guru.
+              </h2>
+              <p className="mt-4 text-white/65 leading-relaxed">
+                Empat bagian utama IncluEdu bekerja sebagai satu rangkaian, sehingga guru tidak perlu mengelola catatan yang terpisah-pisah.
+              </p>
+            </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
+            <div className="mt-8 sm:mt-10 rounded-[2rem] border border-white/10 bg-white/[0.05] p-3 sm:p-4">
+              <div className="grid lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-stretch">
                 {[
                   {
                     number: "01",
                     title: "Rancang PPI",
-                    action: "Guru menentukan kemampuan awal dan tujuan individual.",
-                    result: "Tersimpan sebagai target belajar yang terukur.",
+                    desc: "Tetapkan kemampuan awal dan tujuan belajar individual.",
                     icon: Target,
                     accent: "bg-[#8B5CF6]",
                   },
                   {
                     number: "02",
                     title: "Terapkan strategi",
-                    action: "Guru memilih adaptasi dan cara mengajar yang sesuai.",
-                    result: "Tim memiliki panduan pendampingan yang sama.",
+                    desc: "Gunakan adaptasi mengajar yang sesuai kebutuhan siswa.",
                     icon: BookOpen,
                     accent: "bg-[#0F9F76]",
                   },
                   {
                     number: "03",
                     title: "Pantau kemajuan",
-                    action: "Guru mengisi observasi singkat setelah pembelajaran.",
-                    result: "Perubahan tiap tujuan terlihat dalam grafik.",
+                    desc: "Catat hasil pembelajaran dan lihat perubahan dalam grafik.",
                     icon: BarChart3,
                     accent: "bg-[#D99B16]",
                   },
                   {
                     number: "04",
-                    title: "Evaluasi dan laporkan",
-                    action: "Data observasi dianalisis dan ditinjau oleh guru.",
-                    result: "Tersusun evaluasi PPI dan narasi untuk orang tua.",
+                    title: "Evaluasi",
+                    desc: "Tinjau pencapaian PPI dan susun laporan untuk orang tua.",
                     icon: FileText,
                     accent: "bg-[#D65B73]",
                   },
-                ].map((item) => (
-                  <article key={item.number} className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 sm:p-6">
-                    <div className="flex items-center justify-between">
-                      <div className={`w-11 h-11 rounded-2xl ${item.accent} flex items-center justify-center`}>
-                        <item.icon className="w-5 h-5 text-white" />
+                ].map((item, index, items) => (
+                  <div key={item.number} className="contents">
+                    <article className="min-h-[210px] rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:bg-white/[0.05] transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className={`w-11 h-11 rounded-2xl ${item.accent} flex items-center justify-center`}>
+                          <item.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-white/30">{item.number}</span>
                       </div>
-                      <span className="text-sm font-bold text-white/35">{item.number}</span>
-                    </div>
-                    <h3 className="text-xl font-bold mt-5">{item.title}</h3>
-                    <div className="mt-4 space-y-3 text-sm leading-relaxed">
-                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-white/40">Yang dilakukan guru</div>
-                        <p className="mt-1 text-white/75">{item.action}</p>
+                      <div className="mt-8">
+                        <h3 className="text-lg font-bold">{item.title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-white/60">{item.desc}</p>
                       </div>
-                      <div className="border-t border-white/10 pt-3">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-white/40">Hasilnya</div>
-                        <p className="mt-1 text-white">{item.result}</p>
+                    </article>
+                    {index < items.length - 1 && (
+                      <div className="hidden lg:flex items-center justify-center text-white/20">
+                        <ChevronRight className="w-5 h-5" />
                       </div>
-                    </div>
-                  </article>
+                    )}
+                    {index < items.length - 1 && <div className="lg:hidden h-px bg-white/10 mx-5" />}
+                  </div>
                 ))}
               </div>
             </div>
