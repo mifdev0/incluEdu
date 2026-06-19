@@ -32,16 +32,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session?.user) await loadProfile(data.session.user.id, data.session.user.email || '')
-      setLoading(false)
+    let mounted = true
+
+    async function restoreSession() {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (error) throw error
+        if (data.session?.user && mounted) {
+          await loadProfile(data.session.user.id, data.session.user.email || '')
+        } else if (mounted) {
+          setUser(null)
+        }
+      } catch {
+        if (mounted) setUser(null)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    void restoreSession()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        setUser(null)
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      window.setTimeout(async () => {
+        if (!mounted) return
+        await loadProfile(session.user.id, session.user.email || '')
+        if (mounted) setLoading(false)
+      }, 0)
     })
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) await loadProfile(session.user.id, session.user.email || '')
-      else setUser(null)
-      setLoading(false)
-    })
-    return () => listener.subscription.unsubscribe()
+
+    return () => {
+      mounted = false
+      listener.subscription.unsubscribe()
+    }
   }, [])
 
   async function loadProfile(id: string, email: string) {
