@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
-import { getStudentProgress } from '@/lib/student-progress-data'
-import { getPpiGoals } from '@/lib/ppi-data'
 import { CalendarDays, CheckCircle2, ClipboardList, Pencil, Target, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
+import { FullPageLoading } from '@/components/loading-state'
 
 const statusMap = {
   belum_dimulai: { label: 'Belum dimulai', style: 'bg-surface-container-high text-on-surface-variant' },
@@ -25,25 +24,32 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [goals, setGoals] = useState<PpiGoal[]>([])
   const [strategies, setStrategies] = useState<string[]>([])
   const [period, setPeriod] = useState('')
+  const [daysUntilEvaluation, setDaysUntilEvaluation] = useState<number | null>(null)
+  const [dataLoading, setDataLoading] = useState(true)
+  const [hasPpi, setHasPpi] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
     if (user) {
       supabase.from('siswa').select('nama').eq('id', params.id).single().then(({ data }) => setStudentName(data?.nama || ''))
       supabase.from('ppi').select('id, periode_mulai, periode_selesai, strategi').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle().then(async ({ data }) => {
-        if (!data) return
+        if (!data) {
+          setDataLoading(false)
+          return
+        }
+        setHasPpi(true)
         setStrategies(Array.isArray(data.strategi) ? data.strategi as string[] : [])
         setPeriod(`${data.periode_mulai} – ${data.periode_selesai}`)
+        setDaysUntilEvaluation(Math.max(0, Math.ceil((new Date(data.periode_selesai).getTime() - Date.now()) / 86400000)))
         const { data: goalRows } = await supabase.from('tujuan_ppi').select('id, area, tujuan, indikator, target, capaian, status').eq('ppi_id', data.id).order('created_at')
         setGoals((goalRows || []) as PpiGoal[])
+        setDataLoading(false)
       })
     }
   }, [user, loading, router, params.id])
-  if (loading || !user) return null
+  if (loading || !user || dataLoading) return <FullPageLoading label="Memuat rancangan PPI..." />
 
-  const student = getStudentProgress(params.id)
-  const displayName = studentName || student.nama
-  const visibleGoals = goals.length > 0 ? goals : getPpiGoals(params.id)
+  const displayName = studentName || 'Siswa'
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
@@ -63,7 +69,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mt-2">
             <div>
               <h1 className="font-display text-[34px] md:text-display-lg">{displayName}</h1>
-              <p className="text-white/75 mt-2">{period || 'Periode PPI aktif'} · Evaluasi bulanan</p>
+              <p className="text-white/75 mt-2">{period || 'Belum ada periode PPI'}</p>
             </div>
             <button className="w-full md:w-auto px-5 py-3 rounded-full bg-white text-primary font-bold inline-flex items-center justify-center gap-2"><Pencil className="w-4 h-4" /> Edit rancangan PPI</button>
           </div>
@@ -71,9 +77,9 @@ export default function PpiPage({ params }: { params: { id: string } }) {
 
         <div className="grid md:grid-cols-3 gap-3 mb-md">
           {[
-            { icon: Target, label: 'Tujuan aktif', value: visibleGoals.length, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: CheckCircle2, label: 'Hampir tercapai', value: visibleGoals.filter((item) => item.status === 'hampir_tercapai').length, color: 'text-secondary', bg: 'bg-secondary-container/40' },
-            { icon: CalendarDays, label: 'Evaluasi berikutnya', value: '28 hari', color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
+            { icon: Target, label: 'Tujuan aktif', value: goals.length, color: 'text-primary', bg: 'bg-primary/10' },
+            { icon: CheckCircle2, label: 'Hampir tercapai', value: goals.filter((item) => item.status === 'hampir_tercapai').length, color: 'text-secondary', bg: 'bg-secondary-container/40' },
+            { icon: CalendarDays, label: 'Sisa periode', value: daysUntilEvaluation === null ? '—' : `${daysUntilEvaluation} hari`, color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
           ].map((item) => (
             <div key={item.label} className="bg-white border border-outline-variant/20 rounded-2xl p-4 flex items-center gap-4">
               <div className={`w-11 h-11 rounded-2xl ${item.bg} ${item.color} flex items-center justify-center`}><item.icon className="w-5 h-5" /></div>
@@ -88,7 +94,13 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               <h2 className="font-headline-sm text-headline-sm">Tujuan pembelajaran individual</h2>
               <p className="text-sm text-on-surface-variant mt-1">Observasi mingguan akan mengukur kemajuan terhadap tujuan berikut.</p>
             </div>
-            {visibleGoals.map((goal) => {
+            {!hasPpi && (
+              <div className="rounded-3xl border-2 border-dashed border-outline-variant/40 bg-white p-8 text-center">
+                <h3 className="font-bold text-lg">Belum ada rancangan PPI</h3>
+                <p className="text-sm text-on-surface-variant mt-1">Susun PPI dari hasil asesmen awal siswa.</p>
+              </div>
+            )}
+            {goals.map((goal) => {
               const status = statusMap[goal.status]
               return (
                 <article key={goal.id} className="bg-white rounded-3xl border border-outline-variant/20 p-5 sm:p-md">
@@ -118,7 +130,9 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               <ClipboardList className="w-6 h-6 text-primary mb-3" />
               <h3 className="font-bold text-lg">Strategi pembelajaran</h3>
               <ul className="mt-3 space-y-2 text-sm text-on-surface-variant">
-                {(strategies.length > 0 ? strategies : ['Instruksi satu per satu dengan contoh visual', 'Waktu tambahan untuk tugas tertulis', 'Penguatan positif yang spesifik']).map((strategy) => <li key={strategy}>• {strategy}</li>)}
+                {strategies.length > 0
+                  ? strategies.map((strategy) => <li key={strategy}>• {strategy}</li>)
+                  : <li>Belum ada strategi pembelajaran yang tersimpan.</li>}
               </ul>
             </div>
             <div className="bg-[#E4F8EE] rounded-3xl border border-secondary/10 p-5">

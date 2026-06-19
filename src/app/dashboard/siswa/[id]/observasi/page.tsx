@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { DIMENSI_UNIVERSAL, DIMENSI_KHUSUS, type KategoriABK } from '@/lib/observasi-schema'
 import { BrandLogo } from '@/components/brand-logo'
 import { supabase } from '@/lib/supabase'
+import { FullPageLoading } from '@/components/loading-state'
 
 export default function ObservasiSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
@@ -34,7 +35,7 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
       supabase.from('observasi').select('id', { count: 'exact', head: true }).eq('siswa_id', params.id).then(({ count }) => setWeek((count || 0) + 1))
     }
   }, [user, authLoading, router, params.id])
-  if (authLoading || !user) return null
+  if (authLoading || !user) return <FullPageLoading label="Menyiapkan observasi..." />
 
   const pertanyaanSaatIni = semuaDimensi[step]
   const total = semuaDimensi.length

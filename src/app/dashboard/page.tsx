@@ -7,21 +7,25 @@ import { ArrowRight, BookOpen, CalendarCheck, ClipboardCheck, FileCheck2, Plus, 
 import { BrandLogo } from '@/components/brand-logo'
 import { supabase } from '@/lib/supabase'
 import { useState } from 'react'
+import { FullPageLoading } from '@/components/loading-state'
 
 type ClassCard = { id: string; nama: string; jenjang: string; siswa: number; observasi: number; warna: string; aksen: string; namaSiswa: string[] }
+type AttentionStudent = { id: string; nama: string; days: number | null }
 
 export default function DashboardPage() {
   const { user, loading, logout } = useAuth()
   const router = useRouter()
   const [kelasData, setKelasData] = useState<ClassCard[]>([])
   const [activeGoals, setActiveGoals] = useState(0)
+  const [dataLoading, setDataLoading] = useState(true)
+  const [attentionStudents, setAttentionStudents] = useState<AttentionStudent[]>([])
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
     if (user) {
       Promise.all([
         supabase.from('kelas').select('id, nama, jenjang').order('created_at'),
-        supabase.from('siswa').select('id, nama, kelas_id'),
+        supabase.from('siswa').select('id, nama, kelas_id, observasi(tanggal)'),
         supabase.from('tujuan_ppi').select('id, ppi!inner(siswa!inner(guru_id))').neq('status', 'tercapai'),
         supabase.from('observasi').select('id, siswa_id, siswa!inner(kelas_id)').gte('tanggal', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
       ]).then(([classesResult, studentsResult, goalsResult, observationsResult]) => {
@@ -43,11 +47,21 @@ export default function DashboardPage() {
           }
         }))
         setActiveGoals(goalsResult.data?.length || 0)
+        setAttentionStudents(students.map((student) => {
+          const dates = ((student.observasi || []) as Array<{ tanggal: string }>).map((item) => new Date(item.tanggal).getTime())
+          const latest = dates.length > 0 ? Math.max(...dates) : null
+          return {
+            id: student.id,
+            nama: student.nama,
+            days: latest === null ? null : Math.floor((Date.now() - latest) / 86400000),
+          }
+        }).filter((student) => student.days === null || student.days >= 7).sort((a, b) => (b.days ?? 9999) - (a.days ?? 9999)).slice(0, 3))
+        setDataLoading(false)
       })
     }
   }, [user, loading, router])
 
-  if (loading || !user) return null
+  if (loading || !user || dataLoading) return <FullPageLoading label="Memuat dashboard..." />
 
   const totalSiswa = kelasData.reduce((s, k) => s + k.siswa, 0)
   const observasiMingguIni = kelasData.reduce((s, k) => s + k.observasi, 0)
@@ -158,17 +172,15 @@ export default function DashboardPage() {
               <CalendarCheck className="w-5 h-5" />
             </div>
             <h2 className="font-headline-sm text-headline-sm text-on-surface mb-2">Perlu perhatian</h2>
-            <p className="text-sm text-on-surface-variant mb-4">Dua siswa belum memiliki catatan observasi terbaru.</p>
+            <p className="text-sm text-on-surface-variant mb-4">Siswa yang belum memiliki observasi atau sudah tujuh hari tidak diperbarui.</p>
             <div className="space-y-2">
-              {[
-                { nama: 'Siti Nurhaliza', waktu: '7 hari tanpa observasi', id: '2' },
-                { nama: 'Alya Putri', waktu: '6 hari tanpa observasi', id: '3' },
-              ].map((item) => (
+              {attentionStudents.length === 0 && <p className="rounded-2xl bg-secondary-container/30 p-3 text-sm text-secondary">Tidak ada siswa yang perlu ditindaklanjuti saat ini.</p>}
+              {attentionStudents.map((item) => (
                 <a key={item.nama} href={`/dashboard/siswa/${item.id}/panduan`} className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3 hover:bg-surface-container transition-colors">
                   <div className="w-9 h-9 rounded-full bg-white text-primary font-bold flex items-center justify-center">{item.nama.charAt(0)}</div>
                   <div className="min-w-0">
                     <div className="text-sm font-bold text-on-surface truncate">{item.nama}</div>
-                    <div className="text-xs text-error">{item.waktu}</div>
+                    <div className="text-xs text-error">{item.days === null ? 'Belum pernah diobservasi' : `${item.days} hari tanpa observasi`}</div>
                   </div>
                 </a>
               ))}

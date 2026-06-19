@@ -54,7 +54,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Nama Lengkap</label>
-              <input type="text" value={nama} onChange={e => setNama(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Budi Santoso" required />
+              <input type="text" value={nama} onChange={e => setNama(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Nama lengkap" required />
             </div>
             <div>
               <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Email</label>

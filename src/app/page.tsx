@@ -36,16 +36,9 @@ export default function Home() {
             </svg>
           </div>
 
-          {/* Social Proof */}
-          <div className="inline-flex items-center gap-2 sm:gap-sm bg-surface-container-highest/50 backdrop-blur-sm px-3 sm:px-4 py-2 rounded-full border border-outline-variant/30 mb-md">
-            <div className="flex -space-x-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-surface bg-pastel-purple" />
-              ))}
-            </div>
-            <span className="font-label-md text-label-md text-on-surface-variant">
-              <span className="text-primary font-bold">500+</span> Guru sudah bergabung
-            </span>
+          <div className="inline-flex items-center gap-2 bg-surface-container-highest/50 backdrop-blur-sm px-4 py-2 rounded-full border border-outline-variant/30 mb-md">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="font-label-md text-label-md text-on-surface-variant">Pendampingan individual yang lebih terstruktur</span>
           </div>
 
           <div className="relative z-10 max-w-4xl mx-auto">
@@ -143,14 +136,14 @@ export default function Home() {
         <section className="bg-surface-container py-xl" id="tentang">
           <div className="max-w-container-max mx-auto px-4 sm:px-gutter grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-lg text-center">
             {[
-              { num: "12k+", label: "Siswa Terbantu" },
-              { num: "45+", label: "Kota di Indonesia" },
-              { num: "98%", label: "Guru Puas" },
-              { num: "15m+", label: "Hemat Waktu/Hari" },
-            ].map((s) => (
-              <div key={s.label}>
-                <div className="font-display text-display-lg-mobile text-primary font-bold">{s.num}</div>
-                <div className="font-label-md text-label-md text-on-surface-variant">{s.label}</div>
+              { title: "PPI", label: "Tujuan belajar terukur" },
+              { title: "Observasi", label: "Catatan perkembangan berkala" },
+              { title: "AI", label: "Analisis berbasis data guru" },
+              { title: "Rapor", label: "Narasi empatik untuk orang tua" },
+            ].map((item) => (
+              <div key={item.title}>
+                <div className="font-headline-sm text-headline-sm text-primary font-bold">{item.title}</div>
+                <div className="font-label-md text-label-md text-on-surface-variant mt-1">{item.label}</div>
               </div>
             ))}
           </div>

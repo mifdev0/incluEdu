@@ -6,40 +6,43 @@ import { useRouter } from 'next/navigation'
 import { BrandLogo } from '@/components/brand-logo'
 import { Sparkles, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { FullPageLoading } from '@/components/loading-state'
+
+type Analysis = {
+  trend: 'membaik' | 'stagnan' | 'menurun'
+  nilai_kognitif: number
+  nilai_sosial: number
+  nilai_emosional: number
+  nilai_rata_rata: number
+  highlights: string[]
+  concerns: string[]
+  rekomendasi_guru: string[]
+  rapor_narasi: string
+  rekomendasi_ortu: string[]
+}
 
 export default function RaporSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [student, setStudent] = useState<{ nama: string; kategori: string } | null>(null)
+  const [analisis, setAnalisis] = useState<Analysis | null>(null)
+  const [dataLoading, setDataLoading] = useState(true)
 
-  useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading, router])
-  const defaultAnalysis = {
-    trend: 'membaik' as const,
-    nilai_kognitif: 78, nilai_sosial: 72, nilai_emosional: 85, nilai_rata_rata: 78,
-    highlights: [
-      'Menunjukkan peningkatan dalam memahami instruksi tanpa bantuan',
-      'Kemampuan sosial mulai aktif — berani menyapa teman',
-      'Motivasi belajar meningkat — antusias saat pelajaran dimulai',
-    ],
-    concerns: ['Masih perlu waktu tambahan untuk menyelesaikan tugas', 'Kadang kehilangan fokus saat instruksi terlalu panjang'],
-    rekomendasi_guru: [
-      'Lanjutkan memberikan instruksi langkah demi langkah',
-      'Berikan pujian spesifik setiap kali Budi berhasil mandiri',
-      'Kurangi panjang instruksi, tambahkan visual aid',
-    ],
-    rapor_narasi: `Budi telah menunjukkan perkembangan yang menggembirakan selama satu bulan terakhir. Ia semakin mampu mengikuti instruksi dengan mandiri, terutama ketika instruksi diberikan secara bertahap. Budi juga mulai menunjukkan keberanian untuk berinteraksi dengan teman-temannya, sebuah kemajuan besar dari sebelumnya yang cenderung pasif.
-
-Motivasi belajarnya meningkat signifikan — Budi kini antusias mengikuti pelajaran dan sering mengangkat tangan untuk mencoba menjawab. Meskipun masih membutuhkan waktu tambahan untuk tugas tertulis, kemandirian yang ia tunjukkan adalah pencapaian yang patut diapresiasi.
-
-Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkembang. Kami akan terus memberikan bimbingan sesuai kebutuhannya. Terima kasih atas dukungan Bapak/Ibu di rumah.`,
-    rekomendasi_ortu: [
-      'Bacakan cerita pendek setiap malam dan ajak Budi menceritakan kembali dengan kata-katanya sendiri',
-      'Berikan pujian spesifik ketika Budi berhasil menyelesaikan tugas sendiri',
-    ],
-  }
-  const [analisis, setAnalisis] = useState(defaultAnalysis)
-  if (authLoading || !user) return null
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/login')
+    if (!user) return
+    Promise.all([
+      supabase.from('siswa').select('nama, kategori').eq('id', params.id).single(),
+      supabase.from('analisis_ai').select('hasil').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ]).then(([studentResult, analysisResult]) => {
+      if (studentResult.data) setStudent(studentResult.data)
+      if (analysisResult.data?.hasil) setAnalisis(analysisResult.data.hasil as Analysis)
+      setDataLoading(false)
+    })
+  }, [user, authLoading, router, params.id])
+  if (authLoading || !user || dataLoading) return <FullPageLoading label="Memuat rapor siswa..." />
 
   async function handleGenerate() {
     setLoading(true)
@@ -73,7 +76,11 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
       setLoading(false)
     }
   }
-  async function handleCopyNarasi() { await navigator.clipboard.writeText(analisis.rapor_narasi); alert('Narasi rapor berhasil disalin!') }
+  async function handleCopyNarasi() {
+    if (!analisis) return
+    await navigator.clipboard.writeText(analisis.rapor_narasi)
+    alert('Narasi rapor berhasil disalin!')
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
@@ -88,10 +95,10 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
 
       <main className="pt-24 sm:pt-28 max-w-3xl mx-auto px-4 sm:px-gutter pb-xl">
         <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Rapor Budi Santoso</h2>
-          <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">Slow Learner</span>
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">Rapor {student?.nama || 'Siswa'}</h2>
+          {student?.kategori && <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">{student.kategori.replaceAll('_', ' ')}</span>}
         </div>
-        <p className="text-on-surface-variant font-body-md text-body-md mb-lg">Periode: November 2025</p>
+        <p className="text-on-surface-variant font-body-md text-body-md mb-lg">Periode: {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-lg">
           <button onClick={handleGenerate} disabled={loading}
@@ -99,11 +106,16 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
           >
             {loading ? 'Menganalisis...' : 'Generate Analisis AI'}
           </button>
-          <button onClick={handleCopyNarasi} className="w-full px-6 py-3 rounded-full bg-surface-container-high hover:bg-surface-container-higher text-on-surface font-label-md text-label-md transition-all">Salin Narasi</button>
+          <button onClick={handleCopyNarasi} disabled={!analisis} className="w-full px-6 py-3 rounded-full bg-surface-container-high text-on-surface font-label-md disabled:opacity-40">Salin Narasi</button>
         </div>
         {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container mb-md">{error}</div>}
 
-        <div className="space-y-lg">
+        {!analisis ? (
+          <div className="rounded-3xl border-2 border-dashed border-outline-variant/40 bg-white p-8 text-center">
+            <h3 className="font-bold text-lg">Belum ada analisis rapor</h3>
+            <p className="text-sm text-on-surface-variant mt-1">Klik “Generate Analisis AI” setelah data observasi tersedia.</p>
+          </div>
+        ) : <div className="space-y-lg">
           {/* Nilai */}
           <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">
             <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md">Nilai Angka</h3>
@@ -126,7 +138,7 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
           <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">
             <div className="flex items-center justify-between">
               <h3 className="font-headline-sm text-headline-sm text-on-surface">Tren Perkembangan</h3>
-              <span className="text-sm text-on-secondary-container bg-secondary-container/40 px-4 py-2 rounded-full font-label-md">↑ Membaik</span>
+              <span className="text-sm text-on-secondary-container bg-secondary-container/40 px-4 py-2 rounded-full font-label-md">{analisis.trend === 'membaik' ? '↑ Membaik' : analisis.trend === 'menurun' ? '↓ Menurun' : '→ Stabil'}</span>
             </div>
           </div>
 
@@ -185,7 +197,7 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
               ))}
             </ul>
           </div>
-        </div>
+        </div>}
       </main>
     </div>
   )

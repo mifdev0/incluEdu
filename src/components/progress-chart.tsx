@@ -1,4 +1,10 @@
-import type { ProgressPoint } from '@/lib/student-progress-data'
+export type ProgressPoint = {
+  label: string
+  kognitif: number
+  fokus: number
+  sosial: number
+  emosi: number
+}
 
 const series = [
   { key: 'kognitif', label: 'Kognitif', color: '#7C3AED' },

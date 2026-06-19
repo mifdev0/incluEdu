@@ -6,17 +6,34 @@ import { useRouter } from 'next/navigation'
 import { PANDUAN_ABK } from '@/lib/panduan-data'
 import { Lightbulb } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
+import { FullPageLoading } from '@/components/loading-state'
+import { supabase } from '@/lib/supabase'
 
 export default function PanduanSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [checked, setChecked] = useState<Record<number, boolean>>({})
-  const kategori = 'slow_learner'
+  const [studentName, setStudentName] = useState('')
+  const [kategori, setKategori] = useState('lainnya')
+  const [dataLoading, setDataLoading] = useState(true)
   const panduan = PANDUAN_ABK[kategori]
   const semuaTercheck = panduan?.adaptasi_mengajar.every((_, i) => checked[i])
 
-  useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading, router])
-  if (authLoading || !user) return null
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/login')
+    if (user) {
+      supabase.from('siswa').select('nama, kategori').eq('id', params.id).single().then(({ data }) => {
+        if (data) {
+          setStudentName(data.nama)
+          setKategori(['slow_learner', 'disleksia', 'adhd', 'autisme'].includes(data.kategori)
+            ? data.kategori
+            : ['tunanetra', 'tunarungu'].includes(data.kategori) ? 'sensorik' : 'lainnya')
+        }
+        setDataLoading(false)
+      })
+    }
+  }, [user, authLoading, router, params.id])
+  if (authLoading || !user || dataLoading) return <FullPageLoading label="Memuat panduan..." />
 
   function handleConfirm() { router.push(`/dashboard/siswa/${params.id}/observasi`) }
 
@@ -32,7 +49,8 @@ export default function PanduanSiswaPage({ params }: { params: { id: string } })
       </header>
 
       <main className="pt-24 sm:pt-28 max-w-3xl mx-auto px-4 sm:px-gutter pb-xl">
-        <h2 className="font-headline-md text-headline-md text-on-surface mb-lg">Panduan Mengajar</h2>
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-2">Panduan Mengajar</h2>
+        <p className="text-on-surface-variant mb-lg">{studentName}</p>
 
         <div className="space-y-lg">
           <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">

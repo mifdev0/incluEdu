@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
 import { ArrowRight, Brain, Check, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { FullPageLoading } from '@/components/loading-state'
 
 const categories = [
   { value: 'slow_learner', label: 'Slow Learner' },
@@ -51,7 +52,7 @@ export default function TambahSiswaPage() {
       })
     }
   }, [user, loading, router])
-  if (loading || !user) return null
+  if (loading || !user) return <FullPageLoading label="Menyiapkan formulir siswa..." />
 
   async function analyze() {
     if (!description.trim()) return
@@ -86,7 +87,7 @@ export default function TambahSiswaPage() {
         deskripsi_kebutuhan: description.trim() || null,
         sumber_identifikasi: identificationMode === 'unsure' ? 'ai_dikonfirmasi' : 'guru',
       }).select('id').single()
-      if (studentError) throw studentError
+      if (studentError) throw new Error(formatSaveError(studentError, 'Menyimpan profil siswa'))
 
       const { error: baselineError } = await supabase.from('asesmen_awal').insert({
         siswa_id: student.id,
@@ -95,7 +96,7 @@ export default function TambahSiswaPage() {
         sosial_emosi: baseline.sosial,
         sensorik_motorik: baseline.motorik,
       })
-      if (baselineError) throw baselineError
+      if (baselineError) throw new Error(formatSaveError(baselineError, 'Menyimpan asesmen awal'))
 
       const aiResponse = await fetch('/api/ai', {
         method: 'POST',
@@ -107,7 +108,7 @@ export default function TambahSiswaPage() {
         }),
       })
       const aiPpi = await aiResponse.json()
-      if (!aiResponse.ok) throw new Error(aiPpi.error || 'Gagal menyusun PPI')
+      if (!aiResponse.ok) throw new Error(`Menyusun PPI dengan AI: ${aiPpi.error || 'permintaan gagal'}`)
 
       const start = new Date()
       const end = new Date(start)
@@ -121,7 +122,7 @@ export default function TambahSiswaPage() {
         tim: [{ peran: 'guru', nama: user.nama }],
         status: 'draft',
       }).select('id').single()
-      if (ppiError) throw ppiError
+      if (ppiError) throw new Error(formatSaveError(ppiError, 'Menyimpan rancangan PPI'))
 
       const goals = aiPpi.tujuan_jangka_pendek.map((goal: { area: string; tujuan: string; indikator: string; target: number }) => ({
         ppi_id: ppi.id,
@@ -130,11 +131,11 @@ export default function TambahSiswaPage() {
         status: 'belum_dimulai',
       }))
       const { error: goalsError } = await supabase.from('tujuan_ppi').insert(goals)
-      if (goalsError) throw goalsError
+      if (goalsError) throw new Error(formatSaveError(goalsError, 'Menyimpan tujuan PPI'))
 
       router.push(`/dashboard/siswa/${student.id}/ppi`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal menyimpan siswa')
+      setError(formatSaveError(err, 'Menyimpan siswa'))
     } finally {
       setSaving(false)
     }
@@ -142,6 +143,26 @@ export default function TambahSiswaPage() {
 
   const canContinueProfile = nama.trim() && kelas.trim() && kategori
   const baselineComplete = baselineAreas.every((area) => baseline[area.key])
+
+  function formatSaveError(err: unknown, stage: string) {
+    if (err instanceof Error) return err.message
+    const details = typeof err === 'object' && err !== null
+      ? err as { message?: string; details?: string; hint?: string; code?: string }
+      : null
+    const technicalMessage = [details?.message, details?.details, details?.hint].filter(Boolean).join(' ')
+
+    if (details?.code === '23503' && technicalMessage.includes('profiles')) {
+      return 'Profil akun guru belum terbentuk di database. Jalankan migrasi backfill profiles, lalu keluar dan login kembali.'
+    }
+    if (details?.code === '23503' && technicalMessage.includes('kelas')) {
+      return 'Kelas yang dipilih sudah tidak tersedia. Kembali dan pilih kelas lagi.'
+    }
+    if (details?.code === '42501') {
+      return 'Akses database ditolak. Pastikan sesi login aktif dan kebijakan RLS sudah dijalankan.'
+    }
+    if (technicalMessage) return `${stage}: ${technicalMessage}`
+    return `${stage} gagal. Periksa konfigurasi Supabase lalu coba kembali.`
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">

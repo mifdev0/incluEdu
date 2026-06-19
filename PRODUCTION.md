@@ -4,9 +4,10 @@
 
 1. Create a Supabase project.
 2. Open SQL Editor and run `supabase/migrations/202606190001_initial_production_schema.sql`.
-3. Copy the project URL and anon key into `.env.local`.
-4. Keep the service-role key server-only. Never prefix it with `NEXT_PUBLIC_`.
-5. In Authentication settings, configure the production site URL and allowed redirect URLs.
+3. If accounts existed before the schema was installed, also run `supabase/migrations/202606190002_backfill_existing_profiles.sql`.
+4. Copy the project URL and anon key into `.env.local`.
+5. Keep the service-role key server-only. Never prefix it with `NEXT_PUBLIC_`.
+6. In Authentication settings, configure the production site URL and allowed redirect URLs.
 
 ## 2. DeepSeek
 

@@ -46,7 +46,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadProfile(id: string, email: string) {
     const { data } = await supabase.from('profiles').select('nama, sekolah').eq('id', id).maybeSingle()
-    setUser({ id, email, nama: data?.nama || email.split('@')[0], sekolah: data?.sekolah || undefined })
+    if (data) {
+      setUser({ id, email, nama: data.nama, sekolah: data.sekolah || undefined })
+      return
+    }
+
+    const fallbackName = email.split('@')[0] || 'Guru IncluEdu'
+    const { data: createdProfile } = await supabase
+      .from('profiles')
+      .upsert({ id, nama: fallbackName }, { onConflict: 'id' })
+      .select('nama, sekolah')
+      .single()
+    setUser({
+      id,
+      email,
+      nama: createdProfile?.nama || fallbackName,
+      sekolah: createdProfile?.sekolah || undefined,
+    })
   }
 
   async function login(email: string, password: string): Promise<AuthResult> {

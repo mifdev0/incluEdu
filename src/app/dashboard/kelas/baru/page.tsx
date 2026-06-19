@@ -5,18 +5,21 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { BrandLogo } from '@/components/brand-logo'
 import { supabase } from '@/lib/supabase'
+import { FullPageLoading } from '@/components/loading-state'
 
 export default function KelasBaruPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [nama, setNama] = useState('')
   const [jenjang, setJenjang] = useState('SMP')
-  const [tahunAjaran, setTahunAjaran] = useState('2025/2026')
+  const currentYear = new Date().getFullYear()
+  const defaultAcademicYear = new Date().getMonth() < 6 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`
+  const [tahunAjaran, setTahunAjaran] = useState(defaultAcademicYear)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => { if (!loading && !user) router.push('/login') }, [user, loading, router])
-  if (loading || !user) return null
+  if (loading || !user) return <FullPageLoading label="Menyiapkan formulir kelas..." />
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -57,7 +60,7 @@ export default function KelasBaruPage() {
             <h3 className="font-headline-sm text-headline-sm text-on-surface">Informasi Kelas</h3>
             <div>
               <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Nama Kelas</label>
-              <input type="text" value={nama} onChange={e => setNama(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Kelas 7A" required />
+              <input type="text" value={nama} onChange={e => setNama(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Nama kelas" required />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -70,7 +73,7 @@ export default function KelasBaruPage() {
               </div>
               <div>
                 <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Tahun Ajaran</label>
-                <input type="text" value={tahunAjaran} onChange={e => setTahunAjaran(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="2025/2026" />
+                <input type="text" value={tahunAjaran} onChange={e => setTahunAjaran(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Contoh: 2026/2027" />
               </div>
             </div>
           </div>
