@@ -39,7 +39,19 @@ Kembalikan JSON dengan kategori, keyakinan, alasan singkat, 2-4 pertanyaan_lanju
 Asesmen awal: ${JSON.stringify(body.baseline)}
 Susun satu tujuan jangka panjang, 2-4 tujuan jangka pendek, indikator terukur, target 0-100, dan strategi pembelajaran.`
       )
-      return NextResponse.json(result)
+      const goals = (Array.isArray(result.tujuan_jangka_pendek) ? result.tujuan_jangka_pendek : [])
+        .map((goal) => ({
+          area: String(goal.area || 'Kebutuhan belajar'),
+          tujuan: String(goal.tujuan || ''),
+          indikator: String(goal.indikator || 'Dievaluasi melalui observasi berkala'),
+          target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
+        }))
+        .filter((goal) => goal.tujuan.length > 0)
+      return NextResponse.json({
+        tujuan_jangka_panjang: String(result.tujuan_jangka_panjang || ''),
+        tujuan_jangka_pendek: goals,
+        strategi: Array.isArray(result.strategi) ? result.strategi.map(String) : [],
+      })
     }
 
     if (body.action === 'report') {

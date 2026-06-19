@@ -1,4 +1,4 @@
-import { ClipboardList, Bot, FileText, ArrowRight, Check, Sparkles } from 'lucide-react'
+import { ClipboardList, Bot, FileText, ArrowRight, Check, Target, BookOpen, BarChart3 } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 
 export default function Home() {
@@ -22,10 +22,10 @@ export default function Home() {
         </nav>
       </header>
 
-      <main className="pt-24 sm:pt-32">
+      <main className="pt-[76px] sm:pt-32">
         {/* Hero */}
-        <section className="relative max-w-container-max mx-auto px-4 sm:px-gutter text-center py-12 sm:py-xl overflow-visible">
-          <div className="absolute top-20 left-10 md:left-40 pointer-events-none opacity-60">
+        <section className="relative max-w-container-max mx-auto px-4 sm:px-gutter text-center pt-7 pb-12 sm:py-xl overflow-visible">
+          <div className="hidden sm:block absolute top-20 left-10 md:left-40 pointer-events-none opacity-60">
             <svg className="text-tertiary doodle-sparkle" fill="none" height="60" viewBox="0 0 24 24" width="60">
               <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor" />
             </svg>
@@ -36,13 +36,14 @@ export default function Home() {
             </svg>
           </div>
 
-          <div className="inline-flex items-center gap-2 bg-surface-container-highest/50 backdrop-blur-sm px-4 py-2 rounded-full border border-outline-variant/30 mb-md">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="font-label-md text-label-md text-on-surface-variant">Pendampingan individual yang lebih terstruktur</span>
+          <div className="inline-flex items-center gap-3 mb-4 sm:mb-md">
+            <span className="w-8 h-px bg-primary" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.16em] text-primary">Program Pembelajaran Individual</span>
+            <span className="w-8 h-px bg-primary" />
           </div>
 
           <div className="relative z-10 max-w-4xl mx-auto">
-            <h1 className="font-display text-[34px] leading-[1.15] md:text-display-lg mb-gutter">
+            <h1 className="font-display text-[32px] leading-[1.12] sm:text-[40px] md:text-display-lg mb-4 sm:mb-gutter">
               Nilai Setiap Siswa dengan <br className="hidden sm:block" />
               <span className="relative inline-block">
                 Cara yang Tepat
@@ -51,8 +52,8 @@ export default function Home() {
                 </svg>
               </span>
             </h1>
-            <p className="font-body-lg text-base sm:text-body-lg text-on-surface-variant mb-8 sm:mb-lg max-w-2xl mx-auto">
-              Platform penilaian inklusif berbasis AI yang membantu guru menilai siswa berkebutuhan khusus secara adil dan efisien.
+            <p className="text-[15px] leading-6 sm:text-body-lg text-on-surface-variant mb-6 sm:mb-lg max-w-2xl mx-auto">
+              Susun tujuan belajar, catat perkembangan, dan evaluasi PPI setiap siswa dalam satu ruang kerja yang mudah dipahami guru.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-md">
               <a href="/register" className="w-full sm:w-auto bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-lg py-4 rounded-full font-label-md text-label-md shadow-lg flex items-center justify-center gap-2">
@@ -64,12 +65,13 @@ export default function Home() {
         </section>
 
         {/* How it works */}
-        <section className="max-w-container-max mx-auto px-4 sm:px-gutter py-14 sm:py-xl" id="fitur">
+        <section className="max-w-container-max mx-auto px-4 sm:px-gutter py-12 sm:py-xl" id="fitur">
           <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-lg items-start">
             <div className="lg:sticky lg:top-32">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary font-label-md text-label-md mb-md">
-                <Sparkles className="w-4 h-4" />
-                Dari catatan menjadi pemahaman
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-sm font-bold text-primary">01</span>
+                <span className="h-px w-12 bg-primary/40" />
+                <span className="text-sm font-bold uppercase tracking-[0.14em] text-on-surface-variant">Cara kerja</span>
               </div>
               <h2 className="font-display text-[32px] leading-tight md:text-display-lg text-on-surface mb-md">
                 Satu alur sederhana untuk mendampingi setiap siswa.
@@ -132,20 +134,77 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Stats */}
-        <section className="bg-surface-container py-xl" id="tentang">
-          <div className="max-w-container-max mx-auto px-4 sm:px-gutter grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-lg text-center">
-            {[
-              { title: "PPI", label: "Tujuan belajar terukur" },
-              { title: "Observasi", label: "Catatan perkembangan berkala" },
-              { title: "AI", label: "Analisis berbasis data guru" },
-              { title: "Rapor", label: "Narasi empatik untuk orang tua" },
-            ].map((item) => (
-              <div key={item.title}>
-                <div className="font-headline-sm text-headline-sm text-primary font-bold">{item.title}</div>
-                <div className="font-label-md text-label-md text-on-surface-variant mt-1">{item.label}</div>
+        {/* Product workflow */}
+        <section className="bg-[#241A36] py-14 sm:py-xl text-white" id="tentang">
+          <div className="max-w-container-max mx-auto px-4 sm:px-gutter">
+            <div className="grid lg:grid-cols-[0.7fr_1.3fr] gap-8 lg:gap-lg">
+              <div>
+                <span className="text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Yang dikelola di IncluEdu</span>
+                <h2 className="font-display text-[30px] leading-tight sm:text-display-lg-mobile mt-3">
+                  Bukan sekadar mencatat. Setiap data punya tujuan.
+                </h2>
+                <p className="mt-4 text-white/65 leading-relaxed max-w-md">
+                  Setiap bagian saling terhubung dari perencanaan PPI sampai laporan yang dapat dibaca orang tua.
+                </p>
               </div>
-            ))}
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[
+                  {
+                    number: "01",
+                    title: "Rancang PPI",
+                    action: "Guru menentukan kemampuan awal dan tujuan individual.",
+                    result: "Tersimpan sebagai target belajar yang terukur.",
+                    icon: Target,
+                    accent: "bg-[#8B5CF6]",
+                  },
+                  {
+                    number: "02",
+                    title: "Terapkan strategi",
+                    action: "Guru memilih adaptasi dan cara mengajar yang sesuai.",
+                    result: "Tim memiliki panduan pendampingan yang sama.",
+                    icon: BookOpen,
+                    accent: "bg-[#0F9F76]",
+                  },
+                  {
+                    number: "03",
+                    title: "Pantau kemajuan",
+                    action: "Guru mengisi observasi singkat setelah pembelajaran.",
+                    result: "Perubahan tiap tujuan terlihat dalam grafik.",
+                    icon: BarChart3,
+                    accent: "bg-[#D99B16]",
+                  },
+                  {
+                    number: "04",
+                    title: "Evaluasi dan laporkan",
+                    action: "Data observasi dianalisis dan ditinjau oleh guru.",
+                    result: "Tersusun evaluasi PPI dan narasi untuk orang tua.",
+                    icon: FileText,
+                    accent: "bg-[#D65B73]",
+                  },
+                ].map((item) => (
+                  <article key={item.number} className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div className={`w-11 h-11 rounded-2xl ${item.accent} flex items-center justify-center`}>
+                        <item.icon className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="text-sm font-bold text-white/35">{item.number}</span>
+                    </div>
+                    <h3 className="text-xl font-bold mt-5">{item.title}</h3>
+                    <div className="mt-4 space-y-3 text-sm leading-relaxed">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-white/40">Yang dilakukan guru</div>
+                        <p className="mt-1 text-white/75">{item.action}</p>
+                      </div>
+                      <div className="border-t border-white/10 pt-3">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-white/40">Hasilnya</div>
+                        <p className="mt-1 text-white">{item.result}</p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       </main>

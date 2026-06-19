@@ -78,6 +78,7 @@ export default function TambahSiswaPage() {
     if (!user) return
     setSaving(true)
     setError('')
+    let createdStudentId: string | null = null
     try {
       const { data: student, error: studentError } = await supabase.from('siswa').insert({
         guru_id: user.id,
@@ -88,6 +89,7 @@ export default function TambahSiswaPage() {
         sumber_identifikasi: identificationMode === 'unsure' ? 'ai_dikonfirmasi' : 'guru',
       }).select('id').single()
       if (studentError) throw new Error(formatSaveError(studentError, 'Menyimpan profil siswa'))
+      createdStudentId = student.id
 
       const { error: baselineError } = await supabase.from('asesmen_awal').insert({
         siswa_id: student.id,
@@ -124,17 +126,26 @@ export default function TambahSiswaPage() {
       }).select('id').single()
       if (ppiError) throw new Error(formatSaveError(ppiError, 'Menyimpan rancangan PPI'))
 
-      const goals = aiPpi.tujuan_jangka_pendek.map((goal: { area: string; tujuan: string; indikator: string; target: number }) => ({
-        ppi_id: ppi.id,
-        ...goal,
-        capaian: 0,
-        status: 'belum_dimulai',
-      }))
+      const goals = (Array.isArray(aiPpi.tujuan_jangka_pendek) ? aiPpi.tujuan_jangka_pendek : [])
+        .map((goal: Record<string, unknown>) => ({
+          ppi_id: ppi.id,
+          area: String(goal.area || 'Kebutuhan belajar'),
+          tujuan: String(goal.tujuan || goal.deskripsi || ''),
+          indikator: String(goal.indikator || 'Dievaluasi melalui observasi berkala'),
+          target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
+          capaian: 0,
+          status: 'belum_dimulai',
+        }))
+        .filter((goal: { tujuan: string }) => goal.tujuan.trim().length > 0)
+      if (goals.length === 0) throw new Error('AI tidak menghasilkan tujuan PPI yang dapat disimpan.')
       const { error: goalsError } = await supabase.from('tujuan_ppi').insert(goals)
       if (goalsError) throw new Error(formatSaveError(goalsError, 'Menyimpan tujuan PPI'))
 
       router.push(`/dashboard/siswa/${student.id}/ppi`)
     } catch (err) {
+      if (createdStudentId) {
+        await supabase.from('siswa').delete().eq('id', createdStudentId)
+      }
       setError(formatSaveError(err, 'Menyimpan siswa'))
     } finally {
       setSaving(false)
