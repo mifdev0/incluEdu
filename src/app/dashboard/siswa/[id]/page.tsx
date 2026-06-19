@@ -7,6 +7,7 @@ import { BrandLogo } from '@/components/brand-logo'
 import { ProgressChart } from '@/components/progress-chart'
 import { getStudentProgress } from '@/lib/student-progress-data'
 import { ArrowUpRight, Brain, Heart, MessageCircle, Target } from 'lucide-react'
+import { getPpiGoals } from '@/lib/ppi-data'
 
 export default function ProfilSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading } = useAuth()
@@ -20,6 +21,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const average = Math.round((latest.kognitif + latest.fokus + latest.sosial + latest.emosi) / 4)
   const previousAverage = Math.round((first.kognitif + first.fokus + first.sosial + first.emosi) / 4)
   const change = average - previousAverage
+  const ppiGoals = getPpiGoals(params.id)
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
@@ -89,7 +91,19 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
           <ProgressChart data={siswa.progress} />
         </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <section className="bg-[#F1E8FF] rounded-[2rem] p-5 sm:p-md border border-primary/10 mb-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold text-primary">PROGRAM PEMBELAJARAN INDIVIDUAL</span>
+              <h3 className="font-headline-sm text-headline-sm mt-1">{ppiGoals.length} tujuan sedang dipantau</h3>
+              <p className="text-sm text-on-surface-variant mt-1">Tujuan observasi disesuaikan dengan kemampuan awal dan kebutuhan siswa.</p>
+            </div>
+            <a href={`/dashboard/siswa/${params.id}/ppi`} className="w-full sm:w-auto shrink-0 px-5 py-3 rounded-full bg-white text-primary text-center font-bold">Buka PPI</a>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <a href={`/dashboard/siswa/${params.id}/ppi`} className="px-6 py-3 text-center rounded-full bg-primary-fixed text-primary font-label-md text-label-md transition-all">Lihat PPI</a>
           <a href={`/dashboard/siswa/${params.id}/panduan`} className="px-6 py-3 text-center rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-all">Lihat Panduan</a>
           <a href={`/dashboard/siswa/${params.id}/observasi`} className="px-6 py-3 text-center rounded-full bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm">Isi Observasi</a>
           <a href={`/dashboard/siswa/${params.id}/rapor`} className="px-6 py-3 text-center rounded-full bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm">Lihat Rapor</a>

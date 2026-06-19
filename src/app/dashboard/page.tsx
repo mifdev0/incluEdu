@@ -3,7 +3,7 @@
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { ArrowRight, BookOpen, CalendarCheck, ClipboardCheck, Plus, Sparkles, UsersRound } from 'lucide-react'
+import { ArrowRight, BookOpen, CalendarCheck, ClipboardCheck, FileCheck2, Plus, Sparkles, UsersRound } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 
 const kelasData = [
@@ -52,23 +52,24 @@ export default function DashboardPage() {
                 Ruang pendampingan Anda
               </div>
               <h1 className="font-display text-[32px] leading-tight md:text-display-lg mb-2">Selamat datang, {firstName}.</h1>
-              <p className="text-on-primary/80 text-base sm:text-body-lg">Lihat kebutuhan yang perlu ditindaklanjuti dan catat perkembangan siswa tanpa langkah yang membingungkan.</p>
+              <p className="text-on-primary/80 text-base sm:text-body-lg">Susun PPI, pantau tujuan individual, dan tindak lanjuti perkembangan setiap siswa.</p>
             </div>
-            <a href="/dashboard/kelas/baru" className="w-full md:w-auto shrink-0 bg-white text-primary hover:bg-primary-fixed px-5 py-3.5 rounded-full font-label-md text-label-md shadow-sm inline-flex items-center justify-center gap-2 transition-colors">
+            <a href="/dashboard/siswa/baru" className="w-full md:w-auto shrink-0 bg-white text-primary hover:bg-primary-fixed px-5 py-3.5 rounded-full font-label-md text-label-md shadow-sm inline-flex items-center justify-center gap-2 transition-colors">
               <Plus className="w-5 h-5" />
-              Tambah kelompok
+              Tambah siswa
             </a>
           </div>
         </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-lg">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-lg">
           {[
             { label: 'Kelompok pendampingan', value: kelasData.length, icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
             { label: 'Siswa didampingi', value: totalSiswa, icon: UsersRound, color: 'text-secondary', bg: 'bg-secondary-container/40' },
+            { label: 'Tujuan PPI aktif', value: 6, icon: FileCheck2, color: 'text-cyan-700', bg: 'bg-cyan-100' },
             { label: 'Observasi minggu ini', value: observasiMingguIni, icon: ClipboardCheck, color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-2xl p-5 border border-outline-variant/20 flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl ${s.bg} ${s.color} flex items-center justify-center`}>
+            <div key={s.label} className="bg-white rounded-2xl p-4 sm:p-5 border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl ${s.bg} ${s.color} flex items-center justify-center`}>
                 <s.icon className="w-6 h-6" />
               </div>
               <div>
@@ -84,7 +85,7 @@ export default function DashboardPage() {
             <div className="flex items-end justify-between mb-md">
               <div>
                 <h2 className="font-headline-sm text-headline-sm text-on-surface">Kelompok siswa</h2>
-                <p className="text-on-surface-variant text-sm mt-1">Pilih kelompok untuk melihat profil dan perkembangan siswa.</p>
+                <p className="text-on-surface-variant text-sm mt-1">Pilih kelompok untuk membuka profil, PPI, dan perkembangan siswa.</p>
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-md">
@@ -138,6 +139,9 @@ export default function DashboardPage() {
                 </a>
               ))}
             </div>
+            <a href="/dashboard/kelas/baru" className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-surface-container-high px-4 py-3 text-sm font-bold text-on-surface hover:bg-surface-container-highest">
+              <Plus className="w-4 h-4" /> Buat kelompok baru
+            </a>
           </aside>
         </div>
       </main>
