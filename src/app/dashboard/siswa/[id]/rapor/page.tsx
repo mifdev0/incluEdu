@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
+import { BrandLogo } from '@/components/brand-logo'
 import { Sparkles, Check } from 'lucide-react'
 
 export default function RaporSiswaPage({ params }: { params: { id: string } }) {
@@ -47,7 +48,7 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
         <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
           <div className="flex items-center gap-4">
             <a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← Profil</a>
-            <div className="font-headline-sm text-headline-sm font-bold text-primary">IncluEdu</div>
+            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
           </div>
         </nav>
       </header>

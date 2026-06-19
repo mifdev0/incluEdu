@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { ArrowRight, BookOpen, CalendarCheck, ClipboardCheck, Plus, Sparkles, UsersRound } from 'lucide-react'
+import { BrandLogo } from '@/components/brand-logo'
 
 const kelasData = [
   { id: '1', nama: 'Kelas 7A', jenjang: 'SMP', siswa: 3, observasi: 2, warna: 'bg-[#F1E8FF]', aksen: 'text-primary', namaSiswa: ['Budi', 'Siti', 'Ahmad'] },
@@ -29,7 +30,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#FAFAF5]">
       <header className="z-50 fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-container-max rounded-full border border-outline-variant/20 bg-white/85 backdrop-blur-md shadow-sm">
         <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
-          <a href="/dashboard" className="font-headline-sm text-headline-sm font-bold text-primary">IncluEdu</a>
+          <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 pr-3 border-r border-outline-variant/30">
               <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">{user.nama.charAt(0)}</div>

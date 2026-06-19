@@ -3,6 +3,7 @@
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { BrandLogo } from '@/components/brand-logo'
 
 const siswaData = [
   { id: '1', nama: 'Budi Santoso', kategori: 'Slow Learner', trend: 'membaik' as const, terakhir: '3 hari lalu' },
@@ -25,7 +26,7 @@ export default function DetailKelasPage({ params }: { params: { id: string } }) 
         <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
           <div className="flex items-center gap-4">
             <a href="/dashboard" className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← Dashboard</a>
-            <div className="font-headline-sm text-headline-sm font-bold text-primary">IncluEdu</div>
+            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
           </div>
           <button onClick={() => router.push('/login')} className="text-on-surface-variant hover:text-error transition-colors font-label-md text-label-md">Keluar</button>
         </nav>

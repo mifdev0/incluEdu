@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { PANDUAN_ABK } from '@/lib/panduan-data'
 import { Lightbulb } from 'lucide-react'
+import { BrandLogo } from '@/components/brand-logo'
 
 export default function PanduanSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
@@ -25,7 +26,7 @@ export default function PanduanSiswaPage({ params }: { params: { id: string } })
         <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
           <div className="flex items-center gap-4">
             <a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← Profil</a>
-            <div className="font-headline-sm text-headline-sm font-bold text-primary">IncluEdu</div>
+            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
           </div>
         </nav>
       </header>

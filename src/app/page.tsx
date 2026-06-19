@@ -1,4 +1,5 @@
 import { ClipboardList, Bot, FileText, ArrowRight, Check, Sparkles } from 'lucide-react'
+import { BrandLogo } from '@/components/brand-logo'
 
 export default function Home() {
   return (
@@ -6,7 +7,7 @@ export default function Home() {
       {/* Floating Nav */}
       <header className="z-50 fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-container-max rounded-full border border-outline-variant/20 bg-surface/80 backdrop-blur-md shadow-sm">
         <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
-          <div className="font-headline-sm text-headline-sm font-bold text-primary">IncluEdu</div>
+          <a href="/" aria-label="IncluEdu - Beranda"><BrandLogo compact /></a>
           <div className="hidden md:flex items-center gap-lg">
             <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#fitur">Fitur</a>
             <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#tentang">Tentang</a>
@@ -159,7 +160,7 @@ export default function Home() {
       <footer className="w-full rounded-t-xl bg-surface-container mt-xl">
         <div className="max-w-container-max mx-auto px-gutter py-xl flex flex-col md:flex-row justify-between gap-md">
           <div className="max-w-sm">
-            <div className="font-headline-sm text-headline-sm font-bold text-primary mb-sm">IncluEdu</div>
+            <a href="/" aria-label="IncluEdu - Beranda"><BrandLogo className="mb-sm" /></a>
             <p className="font-body-md text-body-md text-on-surface-variant">
               Memberdayakan setiap guru, mendukung setiap siswa. Solusi cerdas untuk pendidikan inklusif masa depan.
             </p>

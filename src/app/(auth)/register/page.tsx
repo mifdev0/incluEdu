@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { BrandLogo } from '@/components/brand-logo'
 
 export default function RegisterPage() {
   const [nama, setNama] = useState('')
@@ -29,7 +30,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[#FAFAF5] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[420px]">
         <div className="text-center mb-8">
-          <a href="/" className="font-headline-sm text-headline-sm font-bold text-primary">IncluEdu</a>
+          <a href="/" aria-label="IncluEdu - Beranda"><BrandLogo /></a>
           <p className="text-on-surface-variant font-body-md text-body-md mt-1">Platform Penilaian Inklusif untuk Guru</p>
         </div>
 
