@@ -27,14 +27,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF5] flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-[#FAFAF5] flex items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-[420px]">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <a href="/" aria-label="IncluEdu - Beranda"><BrandLogo /></a>
           <p className="text-on-surface-variant font-body-md text-body-md mt-1">Platform Penilaian Inklusif untuk Guru</p>
         </div>
 
-        <div className="bg-surface rounded-xl p-6 sm:p-8 border border-outline-variant/20 hard-shadow">
+        <div className="bg-surface rounded-3xl p-5 sm:p-8 border border-outline-variant/20 hard-shadow">
           <h2 className="font-headline-sm text-headline-sm text-on-surface mb-1">Buat akun baru</h2>
           <p className="text-on-surface-variant font-body-md text-body-md mb-6">Bergabung untuk mulai mengajar inklusif.</p>
 

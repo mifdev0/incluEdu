@@ -44,29 +44,29 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
-      <header className="z-50 fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-container-max rounded-full border border-outline-variant/20 bg-surface/80 backdrop-blur-md shadow-sm">
-        <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
-          <div className="flex items-center gap-4">
-            <a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← Profil</a>
-            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
+      <header className="app-header">
+        <nav className="app-nav">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <a href={`/dashboard/siswa/${params.id}`} className="shrink-0 text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← <span className="hidden min-[390px]:inline">Profil</span></a>
+            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact mobileIconOnly /></a>
           </div>
         </nav>
       </header>
 
-      <main className="pt-28 max-w-3xl mx-auto px-gutter pb-xl">
-        <div className="flex items-center gap-3 mb-2">
+      <main className="pt-24 sm:pt-28 max-w-3xl mx-auto px-4 sm:px-gutter pb-xl">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
           <h2 className="font-headline-sm text-headline-sm text-on-surface">Rapor Budi Santoso</h2>
           <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">Slow Learner</span>
         </div>
         <p className="text-on-surface-variant font-body-md text-body-md mb-lg">Periode: November 2025</p>
 
-        <div className="flex gap-3 mb-lg flex-wrap">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-lg">
           <button onClick={handleGenerate} disabled={loading}
-            className="px-6 py-3 rounded-full bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="w-full px-6 py-3 rounded-full bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {loading ? 'Menganalisis...' : 'Generate Analisis AI'}
           </button>
-          <button onClick={handleCopyNarasi} className="px-6 py-3 rounded-full bg-surface-container-high hover:bg-surface-container-higher text-on-surface font-label-md text-label-md transition-all">Salin Narasi</button>
+          <button onClick={handleCopyNarasi} className="w-full px-6 py-3 rounded-full bg-surface-container-high hover:bg-surface-container-higher text-on-surface font-label-md text-label-md transition-all">Salin Narasi</button>
         </div>
 
         <div className="space-y-lg">

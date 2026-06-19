@@ -74,9 +74,9 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
             <textarea value={catatan} onChange={e => setCatatan(e.target.value)} className="w-full px-5 py-3.5 rounded-xl border border-outline-variant/40 text-body-md font-body-md resize-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" rows={3} placeholder="Tulis catatan tambahan..." />
           </div>
         </div>
-        <div className="flex gap-3 flex-wrap">
-          <button type="button" onClick={() => setStep(0)} className="px-6 py-3.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-all">Ubah Jawaban</button>
-          <button type="submit" disabled={!semuaTerisi} className="flex-1 py-3.5 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">Simpan Observasi</button>
+        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3">
+          <button type="button" onClick={() => setStep(0)} className="w-full px-6 py-3.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-all">Ubah Jawaban</button>
+          <button type="submit" disabled={!semuaTerisi} className="w-full py-3.5 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">Simpan Observasi</button>
         </div>
       </form>
     )
@@ -84,16 +84,16 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
-      <header className="z-50 fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-container-max rounded-full border border-outline-variant/20 bg-surface/80 backdrop-blur-md shadow-sm">
-        <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
-          <div className="flex items-center gap-4">
-            <a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← Profil</a>
-            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
+      <header className="app-header">
+        <nav className="app-nav">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <a href={`/dashboard/siswa/${params.id}`} className="shrink-0 text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← <span className="hidden min-[390px]:inline">Profil</span></a>
+            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact mobileIconOnly /></a>
           </div>
         </nav>
       </header>
 
-      <main className="pt-28 max-w-2xl mx-auto px-gutter pb-xl">
+      <main className="pt-24 sm:pt-28 max-w-2xl mx-auto px-4 sm:px-gutter pb-xl">
         <div className="flex items-center gap-3 mb-2">
           <h2 className="font-headline-sm text-headline-sm text-on-surface">Budi Santoso</h2>
           <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">Slow Learner</span>

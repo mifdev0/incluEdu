@@ -28,21 +28,21 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
-      <header className="z-50 fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-container-max rounded-full border border-outline-variant/20 bg-white/85 backdrop-blur-md shadow-sm">
-        <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
-          <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
+      <header className="app-header">
+        <nav className="app-nav">
+          <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact mobileIconOnly /></a>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 pr-3 border-r border-outline-variant/30">
               <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">{user.nama.charAt(0)}</div>
               <span className="text-on-surface-variant font-label-md text-label-md">{user.nama}</span>
             </div>
-            <button onClick={logout} className="text-on-surface-variant hover:text-error transition-colors font-label-md text-label-md">Keluar</button>
+            <button onClick={logout} className="px-3 py-2 rounded-full text-on-surface-variant hover:text-error hover:bg-error-container/30 transition-colors font-label-md text-label-md">Keluar</button>
           </div>
         </nav>
       </header>
 
-      <main className="pt-28 max-w-container-max mx-auto px-gutter pb-xl">
-        <section className="relative overflow-hidden rounded-[2rem] bg-primary text-on-primary p-md md:p-lg mb-md">
+      <main className="pt-24 sm:pt-28 max-w-container-max mx-auto px-4 sm:px-gutter pb-xl">
+        <section className="relative overflow-hidden rounded-3xl sm:rounded-[2rem] bg-primary text-on-primary p-5 sm:p-md md:p-lg mb-md">
           <div className="absolute -right-14 -top-20 w-64 h-64 rounded-full bg-white/10" />
           <div className="absolute right-40 -bottom-20 w-40 h-40 rounded-full bg-pastel-yellow/20" />
           <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-md">
@@ -51,10 +51,10 @@ export default function DashboardPage() {
                 <Sparkles className="w-4 h-4" />
                 Ruang pendampingan Anda
               </div>
-              <h1 className="font-display text-display-lg-mobile md:text-display-lg mb-2">Selamat datang, {firstName}.</h1>
-              <p className="text-on-primary/80 font-body-lg text-body-lg">Lihat kebutuhan yang perlu ditindaklanjuti dan catat perkembangan siswa tanpa langkah yang membingungkan.</p>
+              <h1 className="font-display text-[32px] leading-tight md:text-display-lg mb-2">Selamat datang, {firstName}.</h1>
+              <p className="text-on-primary/80 text-base sm:text-body-lg">Lihat kebutuhan yang perlu ditindaklanjuti dan catat perkembangan siswa tanpa langkah yang membingungkan.</p>
             </div>
-            <a href="/dashboard/kelas/baru" className="shrink-0 bg-white text-primary hover:bg-primary-fixed px-5 py-3.5 rounded-full font-label-md text-label-md shadow-sm inline-flex items-center justify-center gap-2 transition-colors">
+            <a href="/dashboard/kelas/baru" className="w-full md:w-auto shrink-0 bg-white text-primary hover:bg-primary-fixed px-5 py-3.5 rounded-full font-label-md text-label-md shadow-sm inline-flex items-center justify-center gap-2 transition-colors">
               <Plus className="w-5 h-5" />
               Tambah kelompok
             </a>
@@ -89,7 +89,7 @@ export default function DashboardPage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-md">
               {kelasData.map((kelas) => (
-              <article key={kelas.id} className={`${kelas.warna} rounded-[2rem] p-md border border-white transition-transform duration-300 hover:-translate-y-1`}>
+              <article key={kelas.id} className={`${kelas.warna} rounded-3xl sm:rounded-[2rem] p-5 sm:p-md border border-white transition-transform duration-300 hover:-translate-y-1`}>
                 <div className="flex items-start justify-between mb-5">
                   <div>
                     <h4 className="font-headline-sm text-headline-sm text-on-surface">{kelas.nama}</h4>

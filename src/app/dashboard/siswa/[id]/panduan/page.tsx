@@ -22,16 +22,16 @@ export default function PanduanSiswaPage({ params }: { params: { id: string } })
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
-      <header className="z-50 fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-container-max rounded-full border border-outline-variant/20 bg-surface/80 backdrop-blur-md shadow-sm">
-        <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
-          <div className="flex items-center gap-4">
-            <a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← Profil</a>
-            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact /></a>
+      <header className="app-header">
+        <nav className="app-nav">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <a href={`/dashboard/siswa/${params.id}`} className="shrink-0 text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← <span className="hidden min-[390px]:inline">Profil</span></a>
+            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact mobileIconOnly /></a>
           </div>
         </nav>
       </header>
 
-      <main className="pt-28 max-w-3xl mx-auto px-gutter pb-xl">
+      <main className="pt-24 sm:pt-28 max-w-3xl mx-auto px-4 sm:px-gutter pb-xl">
         <h2 className="font-headline-md text-headline-md text-on-surface mb-lg">Panduan Mengajar</h2>
 
         <div className="space-y-lg">
@@ -45,7 +45,7 @@ export default function PanduanSiswaPage({ params }: { params: { id: string } })
             <p className="text-on-surface-variant font-body-md text-body-md mb-md">Centang setiap adaptasi yang sudah Anda terapkan:</p>
             <div className="space-y-2">
               {panduan?.adaptasi_mengajar.map((item, i) => (
-                <label key={i} className={`flex items-start gap-3 p-3.5 rounded-full cursor-pointer transition-all ${checked[i] ? 'bg-secondary-container/30 border border-secondary-container' : 'bg-surface-container-low border border-transparent'}`}>
+                <label key={i} className={`flex items-start gap-3 p-3.5 rounded-2xl sm:rounded-full cursor-pointer transition-all ${checked[i] ? 'bg-secondary-container/30 border border-secondary-container' : 'bg-surface-container-low border border-transparent'}`}>
                   <input type="checkbox" checked={!!checked[i]} onChange={() => setChecked(prev => ({ ...prev, [i]: !prev[i] }))} className="mt-0.5 rounded border-outline-variant text-primary focus:ring-primary shrink-0" />
                   <span className="text-on-surface font-body-md text-body-md leading-relaxed">{item}</span>
                 </label>

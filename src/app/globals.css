@@ -9,6 +9,42 @@ body {
   color: #1d1a24;
 }
 
+.app-header {
+  position: fixed;
+  z-index: 50;
+  top: 12px;
+  left: 50%;
+  width: calc(100% - 24px);
+  max-width: 1200px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(204, 195, 216, 0.35);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 4px 18px rgba(51, 38, 72, 0.06);
+}
+
+.app-nav {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+@media (min-width: 768px) {
+  .app-header {
+    top: 16px;
+    width: 90%;
+  }
+
+  .app-nav {
+    min-height: 64px;
+    padding: 12px 48px;
+  }
+}
+
 .hard-shadow {
   box-shadow: 6px 6px 0px 0px rgba(0,0,0,0.05);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
