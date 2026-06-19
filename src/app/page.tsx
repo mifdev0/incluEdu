@@ -1,101 +1,140 @@
-import Image from "next/image";
+import { ClipboardList, Bot, FileText, ArrowRight } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <>
+      {/* Floating Nav */}
+      <header className="z-50 fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-container-max rounded-full border border-outline-variant/20 bg-surface/80 backdrop-blur-md shadow-sm">
+        <nav className="flex justify-between items-center px-sm md:px-lg py-sm w-full">
+          <div className="font-headline-sm text-headline-sm font-bold text-primary">IncluEdu</div>
+          <div className="hidden md:flex items-center gap-lg">
+            <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#fitur">Fitur</a>
+            <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#tentang">Tentang</a>
+          </div>
+          <div className="flex gap-3">
+            <a href="/login" className="px-5 py-2 rounded-full font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">Masuk</a>
+            <a href="/register" className="bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-gutter py-2 rounded-full font-label-md text-label-md shadow-sm inline-block">
+              Mulai Gratis
+            </a>
+          </div>
+        </nav>
+      </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+      <main className="pt-32">
+        {/* Hero */}
+        <section className="relative max-w-container-max mx-auto px-gutter text-center py-xl overflow-visible">
+          <div className="absolute top-20 left-10 md:left-40 pointer-events-none opacity-60">
+            <svg className="text-tertiary doodle-sparkle" fill="none" height="60" viewBox="0 0 24 24" width="60">
+              <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor" />
+            </svg>
+          </div>
+          <div className="absolute bottom-40 right-10 md:right-40 pointer-events-none opacity-40">
+            <svg className="text-secondary/30" fill="none" height="60" viewBox="0 0 120 60" width="120">
+              <path d="M10 50C30 20 60 20 90 50" stroke="currentColor" strokeDasharray="8 8" strokeLinecap="round" strokeWidth="4" />
+            </svg>
+          </div>
+
+          {/* Social Proof */}
+          <div className="inline-flex items-center gap-sm bg-surface-container-highest/50 backdrop-blur-sm px-4 py-2 rounded-full border border-outline-variant/30 mb-md">
+            <div className="flex -space-x-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="w-8 h-8 rounded-full border-2 border-surface bg-pastel-purple" />
+              ))}
+            </div>
+            <span className="font-label-md text-label-md text-on-surface-variant">
+              <span className="text-primary font-bold">500+</span> Guru sudah bergabung
+            </span>
+          </div>
+
+          <div className="relative z-10 max-w-4xl mx-auto">
+            <h1 className="font-display text-display-lg-mobile md:text-display-lg mb-gutter leading-tight">
+              Nilai Setiap Siswa dengan <br />
+              <span className="relative inline-block">
+                Cara yang Tepat
+                <svg className="absolute -bottom-2 left-0 w-full" height="10" preserveAspectRatio="none" viewBox="0 0 300 10">
+                  <path d="M0 5C50 2 150 2 300 8" fill="none" stroke="#732ee4" strokeLinecap="round" strokeWidth="4" />
+                </svg>
+              </span>
+            </h1>
+            <p className="font-body-lg text-body-lg text-on-surface-variant mb-lg max-w-2xl mx-auto">
+              Platform penilaian inklusif berbasis AI yang membantu guru menilai siswa berkebutuhan khusus secara adil dan efisien.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-md">
+              <a href="/register" className="bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-lg py-4 rounded-full font-label-md text-label-md shadow-lg flex items-center gap-2">
+                Mulai Gratis
+                <ArrowRight className="w-5 h-5" />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* Fitur Cards */}
+        <section className="max-w-container-max mx-auto px-gutter py-xl" id="fitur">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
+            {([
+              { bg: "bg-pastel-purple", title: "Observasi Adaptif", desc: "Catat perkembangan harian siswa dengan parameter yang disesuaikan untuk berbagai kebutuhan belajar.", color: "text-primary", icon: ClipboardList },
+              { bg: "bg-pastel-green", title: "Analisis AI", desc: "AI membantu mengolah data observasi menjadi wawasan mendalam tentang potensi unik setiap siswa.", color: "text-on-secondary-container", icon: Bot },
+              { bg: "bg-pastel-yellow", title: "Rapor Naratif", desc: "Hasilkan laporan naratif yang empatik dan mudah dipahami orang tua secara otomatis dalam hitungan menit.", color: "text-tertiary", icon: FileText },
+            ] as const).map((card) => (
+              <div key={card.title} className={`${card.bg} rounded-xl p-lg border border-primary/10 hard-shadow flex flex-col items-center text-center group`}>
+                <div className="w-full aspect-square mb-md bg-white/40 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="w-4/5 h-4/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                    <card.icon className="w-20 h-20 text-on-surface-variant opacity-60" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <h3 className={`font-headline-sm text-headline-sm mb-sm ${card.color}`}>{card.title}</h3>
+                <p className="text-on-surface-variant font-body-md text-body-md">{card.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Stats */}
+        <section className="bg-surface-container py-xl" id="tentang">
+          <div className="max-w-container-max mx-auto px-gutter grid grid-cols-2 md:grid-cols-4 gap-lg text-center">
+            {[
+              { num: "12k+", label: "Siswa Terbantu" },
+              { num: "45+", label: "Kota di Indonesia" },
+              { num: "98%", label: "Guru Puas" },
+              { num: "15m+", label: "Hemat Waktu/Hari" },
+            ].map((s) => (
+              <div key={s.label}>
+                <div className="font-display text-display-lg-mobile text-primary font-bold">{s.num}</div>
+                <div className="font-label-md text-label-md text-on-surface-variant">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Footer */}
+      <footer className="w-full rounded-t-xl bg-surface-container mt-xl">
+        <div className="max-w-container-max mx-auto px-gutter py-xl flex flex-col md:flex-row justify-between gap-md">
+          <div className="max-w-sm">
+            <div className="font-headline-sm text-headline-sm font-bold text-primary mb-sm">IncluEdu</div>
+            <p className="font-body-md text-body-md text-on-surface-variant">
+              Memberdayakan setiap guru, mendukung setiap siswa. Solusi cerdas untuk pendidikan inklusif masa depan.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-lg">
+            <div className="flex flex-col gap-sm">
+              <h4 className="font-label-md text-label-md font-bold text-on-surface">Navigasi</h4>
+              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#fitur">Fitur</a>
+              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#tentang">Tentang</a>
+            </div>
+            <div className="flex flex-col gap-sm">
+              <h4 className="font-label-md text-label-md font-bold text-on-surface">Legal</h4>
+              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Kebijakan Privasi</a>
+              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Syarat & Ketentuan</a>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-container-max mx-auto px-gutter py-md border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center text-center gap-sm">
+          <p className="font-body-md text-body-md text-on-surface-variant opacity-70">
+            © 2025 IncluEdu Indonesia. Memberdayakan setiap guru, mendukung setiap siswa.
+          </p>
+        </div>
       </footer>
-    </div>
-  );
+    </>
+  )
 }
