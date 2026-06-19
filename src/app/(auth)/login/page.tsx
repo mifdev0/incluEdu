@@ -17,10 +17,10 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const ok = await login(email, password)
+    const result = await login(email, password)
     setLoading(false)
-    if (ok) router.push('/dashboard')
-    else setError('Email atau kata sandi tidak valid.')
+    if (result.ok) router.push('/dashboard')
+    else setError(result.message || 'Login gagal.')
   }
 
   return (

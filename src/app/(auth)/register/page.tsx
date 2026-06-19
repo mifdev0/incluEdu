@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [sekolah, setSekolah] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const { register } = useAuth()
   const router = useRouter()
@@ -19,11 +20,16 @@ export default function RegisterPage() {
     e.preventDefault()
     if (password.length < 6) { setError('Kata sandi minimal 6 karakter'); return }
     setError('')
+    setSuccess('')
     setLoading(true)
-    const ok = await register(nama, email, password, sekolah)
+    const result = await register(nama, email, password, sekolah)
     setLoading(false)
-    if (ok) router.push('/dashboard')
-    else setError('Email sudah terdaftar. Gunakan email lain.')
+    if (result.ok) {
+      setSuccess(result.message || 'Akun berhasil dibuat.')
+      if (result.message === 'Akun berhasil dibuat.') router.push('/dashboard')
+    } else {
+      setError(result.message || 'Pendaftaran gagal.')
+    }
   }
 
   return (
@@ -40,6 +46,9 @@ export default function RegisterPage() {
 
           {error && (
             <div className="bg-error-container text-on-error-container text-sm rounded-full px-5 py-3 mb-4 font-body-md">{error}</div>
+          )}
+          {success && (
+            <div className="bg-secondary-container/40 text-on-secondary-container text-sm rounded-2xl px-5 py-3 mb-4 font-body-md">{success}</div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
