@@ -7,19 +7,7 @@ import { BrandLogo } from '@/components/brand-logo'
 import { Sparkles, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { FullPageLoading } from '@/components/loading-state'
-
-type Analysis = {
-  trend: 'membaik' | 'stagnan' | 'menurun'
-  nilai_kognitif: number
-  nilai_sosial: number
-  nilai_emosional: number
-  nilai_rata_rata: number
-  highlights: string[]
-  concerns: string[]
-  rekomendasi_guru: string[]
-  rapor_narasi: string
-  rekomendasi_ortu: string[]
-}
+import { normalizeAnalysis, type NormalizedAnalysis } from '@/lib/analysis-normalizer'
 
 export default function RaporSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
@@ -27,7 +15,7 @@ export default function RaporSiswaPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [student, setStudent] = useState<{ nama: string; kategori: string } | null>(null)
-  const [analisis, setAnalisis] = useState<Analysis | null>(null)
+  const [analisis, setAnalisis] = useState<NormalizedAnalysis | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
 
   useEffect(() => {
@@ -38,7 +26,7 @@ export default function RaporSiswaPage({ params }: { params: { id: string } }) {
       supabase.from('analisis_ai').select('hasil').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ]).then(([studentResult, analysisResult]) => {
       if (studentResult.data) setStudent(studentResult.data)
-      if (analysisResult.data?.hasil) setAnalisis(analysisResult.data.hasil as Analysis)
+      if (analysisResult.data?.hasil) setAnalisis(normalizeAnalysis(analysisResult.data.hasil))
       setDataLoading(false)
     })
   }, [user, authLoading, router, params.id])
@@ -63,11 +51,12 @@ export default function RaporSiswaPage({ params }: { params: { id: string } }) {
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Analisis AI gagal')
-      setAnalisis(result)
+      const normalizedResult = normalizeAnalysis(result)
+      setAnalisis(normalizedResult)
       await supabase.from('analisis_ai').insert({
         siswa_id: params.id,
         periode: new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
-        hasil: result,
+        hasil: normalizedResult,
         model: 'deepseek-chat',
       })
     } catch (err) {

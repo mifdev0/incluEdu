@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { deepseekJson } from '@/lib/deepseek'
+import { normalizeAnalysis } from '@/lib/analysis-normalizer'
 
 export const runtime = 'nodejs'
 
@@ -63,7 +64,7 @@ Observasi: ${JSON.stringify(body.observations)}
 Kembalikan JSON: trend, nilai_kognitif, nilai_sosial, nilai_emosional, nilai_rata_rata, highlights, concerns, rekomendasi_guru, rapor_narasi, rekomendasi_ortu.`,
         2400
       )
-      return NextResponse.json(result)
+      return NextResponse.json(normalizeAnalysis(result))
     }
 
     return NextResponse.json({ error: 'Action tidak didukung' }, { status: 400 })
