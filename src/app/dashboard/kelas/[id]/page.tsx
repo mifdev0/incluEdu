@@ -4,12 +4,11 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
-const siswaAbk = [
+const siswaData = [
   { id: '1', nama: 'Budi Santoso', kategori: 'Slow Learner', trend: 'membaik' as const, terakhir: '3 hari lalu' },
   { id: '2', nama: 'Siti Nurhaliza', kategori: 'Disleksia', trend: 'stagnan' as const, terakhir: '1 minggu lalu' },
   { id: '3', nama: 'Ahmad Rizki', kategori: 'ADHD', trend: 'menurun' as const, terakhir: '5 hari lalu' },
 ]
-const siswaReguler = ['Dewi Lestari', 'Rudi Hartono', 'Mega Wati', 'Indah Permata', 'Fajar Ramadhan']
 
 export default function DetailKelasPage({ params }: { params: { id: string } }) {
   const { user, loading } = useAuth()
@@ -39,12 +38,12 @@ export default function DetailKelasPage({ params }: { params: { id: string } }) 
             <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">SMP</span>
             <span className="text-xs text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full font-label-sm">2025/2026</span>
           </div>
-          <p className="text-on-surface-variant font-body-md text-body-md">ID Kelas: {params.id} · 35 siswa · 3 ABK</p>
+          <p className="text-on-surface-variant font-body-md text-body-md">ID Kelompok: {params.id} · 3 siswa didampingi</p>
         </div>
 
-        <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md">Siswa ABK</h3>
+        <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md">Siswa dalam pendampingan</h3>
         <div className="space-y-3 mb-xl">
-          {siswaAbk.map((siswa, i) => {
+          {siswaData.map((siswa, i) => {
             const colors = ['bg-pastel-purple', 'bg-pastel-green', 'bg-pastel-yellow']
             return (
               <div key={siswa.id} className={`${colors[i]} rounded-xl p-md border border-primary/10 hard-shadow`}>
@@ -76,15 +75,6 @@ export default function DetailKelasPage({ params }: { params: { id: string } }) 
           })}
         </div>
 
-        <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md">Siswa Reguler</h3>
-        <div className="bg-surface rounded-xl border border-outline-variant/20 divide-y divide-outline-variant/10 hard-shadow">
-          {siswaReguler.map((nama, i) => (
-            <div key={i} className="flex items-center justify-between px-md py-3.5">
-              <span className="font-body-md text-body-md text-on-surface">{nama}</span>
-              <span className="text-xs text-on-secondary-container bg-secondary-container/40 px-3 py-1 rounded-full font-label-sm">Hadir</span>
-            </div>
-          ))}
-        </div>
       </main>
     </div>
   )

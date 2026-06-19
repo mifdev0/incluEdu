@@ -19,9 +19,8 @@ export default function KelasBaruPage() {
   const [nama, setNama] = useState('')
   const [jenjang, setJenjang] = useState('SMP')
   const [tahunAjaran, setTahunAjaran] = useState('2025/2026')
-  const [siswaList, setSiswaList] = useState<Array<{ nama: string; isAbk: boolean; kategori?: string }>>([])
+  const [siswaList, setSiswaList] = useState<Array<{ nama: string; kategori?: string }>>([])
   const [namaSiswa, setNamaSiswa] = useState('')
-  const [isAbk, setIsAbk] = useState(false)
   const [kategori, setKategori] = useState('')
 
   useEffect(() => { if (!loading && !user) router.push('/login') }, [user, loading, router])
@@ -29,8 +28,8 @@ export default function KelasBaruPage() {
 
   function tambahSiswa() {
     if (!namaSiswa.trim()) return
-    setSiswaList(prev => [...prev, { nama: namaSiswa.trim(), isAbk, kategori: isAbk ? kategori : undefined }])
-    setNamaSiswa(''); setIsAbk(false); setKategori('')
+    setSiswaList(prev => [...prev, { nama: namaSiswa.trim(), kategori: kategori || undefined }])
+    setNamaSiswa(''); setKategori('')
   }
 
   function handleSubmit(e: React.FormEvent) { e.preventDefault(); router.push('/dashboard') }
@@ -47,7 +46,8 @@ export default function KelasBaruPage() {
       </header>
 
       <main className="pt-28 max-w-3xl mx-auto px-gutter pb-xl">
-        <h2 className="font-headline-md text-headline-md text-on-surface mb-lg">Buat Kelas Baru</h2>
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-2">Buat Kelompok Pendampingan</h2>
+        <p className="text-on-surface-variant mb-lg">Kelompokkan siswa berdasarkan kelas atau jadwal pendampingan agar pemantauan lebih mudah.</p>
 
         <form onSubmit={handleSubmit} className="space-y-lg">
           <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow space-y-md">
@@ -78,16 +78,13 @@ export default function KelasBaruPage() {
               <input type="text" value={namaSiswa} onChange={e => setNamaSiswa(e.target.value)} className="flex-1 px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Nama siswa" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), tambahSiswa())} />
               <button type="button" onClick={tambahSiswa} className="px-6 py-3.5 rounded-full bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm">Tambah</button>
             </div>
-            <label className="flex items-center gap-2 text-on-surface font-body-md text-body-md cursor-pointer">
-              <input type="checkbox" checked={isAbk} onChange={e => setIsAbk(e.target.checked)} className="rounded border-outline-variant text-primary focus:ring-primary" />
-              Siswa berkebutuhan khusus (ABK)
-            </label>
-            {isAbk && (
+            <div>
+              <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Kebutuhan belajar utama</label>
               <select value={kategori} onChange={e => setKategori(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low">
-                <option value="">Pilih kategori ABK</option>
+                <option value="">Pilih kebutuhan belajar</option>
                 {KATEGORI_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
               </select>
-            )}
+            </div>
             {siswaList.length > 0 && (
               <div>
                 <p className="text-on-surface-variant font-body-md text-body-md mb-2">Daftar Siswa ({siswaList.length})</p>
@@ -95,7 +92,7 @@ export default function KelasBaruPage() {
                   {siswaList.map((s, i) => (
                     <div key={i} className="flex items-center justify-between px-5 py-3 bg-surface-container-low rounded-full">
                       <span className="text-on-surface font-body-md text-body-md">{s.nama}</span>
-                      {s.isAbk && <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">ABK</span>}
+                      {s.kategori && <span className="max-w-[55%] truncate text-xs text-primary bg-primary/10 px-3 py-1 rounded-full font-label-sm">{s.kategori}</span>}
                     </div>
                   ))}
                 </div>
@@ -103,7 +100,7 @@ export default function KelasBaruPage() {
             )}
           </div>
 
-          <button type="submit" className="w-full py-4 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm">Simpan Kelas</button>
+          <button type="submit" className="w-full py-4 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm">Simpan Kelompok</button>
         </form>
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { ClipboardList, Bot, FileText, ArrowRight } from 'lucide-react'
+import { ClipboardList, Bot, FileText, ArrowRight, Check, Sparkles } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -68,24 +68,72 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Fitur Cards */}
+        {/* How it works */}
         <section className="max-w-container-max mx-auto px-gutter py-xl" id="fitur">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-            {([
-              { bg: "bg-pastel-purple", title: "Observasi Adaptif", desc: "Catat perkembangan harian siswa dengan parameter yang disesuaikan untuk berbagai kebutuhan belajar.", color: "text-primary", icon: ClipboardList },
-              { bg: "bg-pastel-green", title: "Analisis AI", desc: "AI membantu mengolah data observasi menjadi wawasan mendalam tentang potensi unik setiap siswa.", color: "text-on-secondary-container", icon: Bot },
-              { bg: "bg-pastel-yellow", title: "Rapor Naratif", desc: "Hasilkan laporan naratif yang empatik dan mudah dipahami orang tua secara otomatis dalam hitungan menit.", color: "text-tertiary", icon: FileText },
-            ] as const).map((card) => (
-              <div key={card.title} className={`${card.bg} rounded-xl p-lg border border-primary/10 hard-shadow flex flex-col items-center text-center group`}>
-                <div className="w-full aspect-square mb-md bg-white/40 rounded-lg flex items-center justify-center overflow-hidden">
-                  <div className="w-4/5 h-4/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                    <card.icon className="w-20 h-20 text-on-surface-variant opacity-60" strokeWidth={1.5} />
-                  </div>
-                </div>
-                <h3 className={`font-headline-sm text-headline-sm mb-sm ${card.color}`}>{card.title}</h3>
-                <p className="text-on-surface-variant font-body-md text-body-md">{card.desc}</p>
+          <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-lg items-start">
+            <div className="lg:sticky lg:top-32">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary font-label-md text-label-md mb-md">
+                <Sparkles className="w-4 h-4" />
+                Dari catatan menjadi pemahaman
               </div>
-            ))}
+              <h2 className="font-display text-display-lg-mobile md:text-display-lg text-on-surface mb-md">
+                Satu alur sederhana untuk mendampingi setiap siswa.
+              </h2>
+              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-lg">
+                IncluEdu membantu guru fokus pada hal yang penting: memahami kebutuhan, melihat kemajuan, dan menyampaikan perkembangan dengan bahasa yang manusiawi.
+              </p>
+            </div>
+
+            <div className="relative space-y-md">
+              <div className="hidden md:block absolute left-8 top-16 bottom-16 w-px bg-gradient-to-b from-primary via-secondary to-tertiary opacity-30" />
+              {([
+                {
+                  step: "01",
+                  title: "Amati dengan lebih terarah",
+                  desc: "Pertanyaan observasi menyesuaikan kebutuhan belajar siswa, jadi guru tidak perlu menebak apa yang harus dicatat.",
+                  detail: "Catatan singkat, relevan, dan dapat diisi setelah pembelajaran.",
+                  bg: "bg-[#F3EAFF]",
+                  color: "text-primary",
+                  icon: ClipboardList,
+                },
+                {
+                  step: "02",
+                  title: "Temukan pola perkembangannya",
+                  desc: "AI merangkum catatan menjadi pola yang mudah dibaca tanpa membandingkan siswa dengan teman sekelasnya.",
+                  detail: "Lihat kekuatan, tantangan, dan langkah pendampingan berikutnya.",
+                  bg: "bg-[#E4F8EE]",
+                  color: "text-secondary",
+                  icon: Bot,
+                },
+                {
+                  step: "03",
+                  title: "Ceritakan kemajuan dengan empati",
+                  desc: "Susun rapor naratif yang jelas bagi orang tua, tetap personal, dan berfokus pada perkembangan anak.",
+                  detail: "Draf siap ditinjau guru sebelum dibagikan.",
+                  bg: "bg-[#FFF5CF]",
+                  color: "text-tertiary",
+                  icon: FileText,
+                },
+              ] as const).map((item) => (
+                <article key={item.step} className={`${item.bg} relative rounded-[2rem] border border-white/70 p-md md:p-lg overflow-hidden group transition-transform duration-300 hover:-translate-y-1`}>
+                  <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full bg-white/40" />
+                  <div className="relative flex flex-col md:flex-row gap-md">
+                    <div className={`w-16 h-16 shrink-0 rounded-2xl bg-white/80 ${item.color} flex items-center justify-center shadow-sm`}>
+                      <item.icon className="w-7 h-7" strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1">
+                      <span className={`font-label-sm text-label-sm ${item.color}`}>LANGKAH {item.step}</span>
+                      <h3 className="font-headline-sm text-headline-sm text-on-surface mt-1 mb-2">{item.title}</h3>
+                      <p className="text-on-surface-variant font-body-md text-body-md mb-3">{item.desc}</p>
+                      <div className="flex items-start gap-2 text-sm font-semibold text-on-surface">
+                        <Check className={`w-4 h-4 mt-0.5 shrink-0 ${item.color}`} strokeWidth={3} />
+                        {item.detail}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -131,7 +179,7 @@ export default function Home() {
         </div>
         <div className="max-w-container-max mx-auto px-gutter py-md border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center text-center gap-sm">
           <p className="font-body-md text-body-md text-on-surface-variant opacity-70">
-            © 2025 IncluEdu Indonesia. Memberdayakan setiap guru, mendukung setiap siswa.
+            © 2026 IncluEdu Indonesia. Memberdayakan setiap guru, mendukung setiap siswa.
           </p>
         </div>
       </footer>
