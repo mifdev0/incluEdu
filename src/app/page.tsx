@@ -38,12 +38,12 @@ export default function Home() {
 
           <div className="inline-flex items-center gap-3 mb-4 sm:mb-md">
             <span className="w-8 h-px bg-primary" />
-            <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.16em] text-primary">Program Pembelajaran Individual</span>
+            <span className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.14em] text-primary">Program Pembelajaran Individual</span>
             <span className="w-8 h-px bg-primary" />
           </div>
 
           <div className="relative z-10 max-w-4xl mx-auto">
-            <h1 className="font-display text-[32px] leading-[1.12] sm:text-[40px] md:text-display-lg mb-4 sm:mb-gutter">
+            <h1 className="font-display text-[28px] leading-[1.14] sm:text-[40px] md:text-display-lg mb-3 sm:mb-gutter">
               Nilai Setiap Siswa dengan <br className="hidden sm:block" />
               <span className="relative inline-block">
                 Cara yang Tepat
@@ -52,11 +52,11 @@ export default function Home() {
                 </svg>
               </span>
             </h1>
-            <p className="text-[15px] leading-6 sm:text-body-lg text-on-surface-variant mb-6 sm:mb-lg max-w-2xl mx-auto">
+            <p className="text-sm leading-[1.55] sm:text-body-lg text-on-surface-variant mb-5 sm:mb-lg max-w-2xl mx-auto">
               Susun tujuan belajar, catat perkembangan, dan evaluasi PPI setiap siswa dalam satu ruang kerja yang mudah dipahami guru.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-md">
-              <a href="/register" className="w-full sm:w-auto bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-lg py-4 rounded-full font-label-md text-label-md shadow-lg flex items-center justify-center gap-2">
+              <a href="/register" className="w-full sm:w-auto bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-6 sm:px-lg py-3.5 sm:py-4 rounded-full text-sm font-bold shadow-lg flex items-center justify-center gap-2">
                 Mulai Gratis
                 <ArrowRight className="w-5 h-5" />
               </a>
@@ -70,12 +70,12 @@ export default function Home() {
             <div className="lg:sticky lg:top-32">
               <div className="flex items-center gap-3 mb-4">
                 <span className="h-px w-12 bg-primary" />
-                <span className="text-sm font-bold uppercase tracking-[0.14em] text-on-surface-variant">Cara kerja</span>
+                <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-on-surface-variant">Cara kerja</span>
               </div>
-              <h2 className="font-display text-[32px] leading-tight md:text-display-lg text-on-surface mb-md">
+              <h2 className="font-display text-[26px] leading-[1.18] sm:text-[34px] md:text-display-lg text-on-surface mb-3 sm:mb-md">
                 Satu alur sederhana untuk mendampingi setiap siswa.
               </h2>
-              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-lg">
+              <p className="text-sm leading-6 sm:text-body-lg text-on-surface-variant max-w-lg">
                 IncluEdu membantu guru fokus pada hal yang penting: memahami kebutuhan, melihat kemajuan, dan menyampaikan perkembangan dengan bahasa yang manusiawi.
               </p>
             </div>
@@ -118,10 +118,10 @@ export default function Home() {
                       <item.icon className="w-7 h-7" strokeWidth={1.8} />
                     </div>
                     <div className="flex-1">
-                      <span className={`font-label-sm text-label-sm ${item.color}`}>LANGKAH {item.step}</span>
-                      <h3 className="font-headline-sm text-headline-sm text-on-surface mt-1 mb-2">{item.title}</h3>
-                      <p className="text-on-surface-variant font-body-md text-body-md mb-3">{item.desc}</p>
-                      <div className="flex items-start gap-2 text-sm font-semibold text-on-surface">
+                      <span className={`text-[10px] sm:text-label-sm font-bold tracking-wide ${item.color}`}>LANGKAH {item.step}</span>
+                      <h3 className="text-lg sm:text-headline-sm font-bold text-on-surface mt-1 mb-2">{item.title}</h3>
+                      <p className="text-on-surface-variant text-sm leading-6 sm:text-body-md mb-3">{item.desc}</p>
+                      <div className="flex items-start gap-2 text-xs sm:text-sm font-semibold text-on-surface">
                         <Check className={`w-4 h-4 mt-0.5 shrink-0 ${item.color}`} strokeWidth={3} />
                         {item.detail}
                       </div>
@@ -137,11 +137,11 @@ export default function Home() {
         <section className="bg-[#241A36] py-14 sm:py-xl text-white" id="tentang">
           <div className="max-w-container-max mx-auto px-4 sm:px-gutter">
             <div className="max-w-2xl">
-              <span className="text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Satu siklus pendampingan</span>
-              <h2 className="font-display text-[30px] leading-tight sm:text-display-lg-mobile mt-3">
+              <span className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Satu siklus pendampingan</span>
+              <h2 className="font-display text-[25px] leading-[1.18] sm:text-display-lg-mobile mt-2 sm:mt-3">
                 Dari kebutuhan siswa menuju langkah yang bisa dilakukan guru.
               </h2>
-              <p className="mt-4 text-white/65 leading-relaxed">
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/65 leading-6 sm:leading-relaxed">
                 Empat bagian utama IncluEdu bekerja sebagai satu rangkaian, sehingga guru tidak perlu mengelola catatan yang terpisah-pisah.
               </p>
             </div>
@@ -179,16 +179,16 @@ export default function Home() {
                   },
                 ].map((item, index, items) => (
                   <div key={item.number} className="contents">
-                    <article className="min-h-[210px] rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:bg-white/[0.05] transition-colors">
+                    <article className="min-h-[170px] sm:min-h-[210px] rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:bg-white/[0.05] transition-colors">
                       <div className="flex items-center justify-between">
                         <div className={`w-11 h-11 rounded-2xl ${item.accent} flex items-center justify-center`}>
                           <item.icon className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-xs font-bold text-white/30">{item.number}</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-white/30">{item.number}</span>
                       </div>
-                      <div className="mt-8">
-                        <h3 className="text-lg font-bold">{item.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-white/60">{item.desc}</p>
+                      <div className="mt-5 sm:mt-8">
+                        <h3 className="text-base sm:text-lg font-bold">{item.title}</h3>
+                        <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm leading-5 sm:leading-6 text-white/60">{item.desc}</p>
                       </div>
                     </article>
                     {index < items.length - 1 && (
@@ -210,25 +210,25 @@ export default function Home() {
         <div className="max-w-container-max mx-auto px-gutter py-xl flex flex-col md:flex-row justify-between gap-md">
           <div className="max-w-sm">
             <a href="/" aria-label="IncluEdu - Beranda"><BrandLogo className="mb-sm" /></a>
-            <p className="font-body-md text-body-md text-on-surface-variant">
+            <p className="text-sm sm:text-body-md text-on-surface-variant">
               Memberdayakan setiap guru, mendukung setiap siswa. Solusi cerdas untuk pendidikan inklusif masa depan.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-lg">
             <div className="flex flex-col gap-sm">
-              <h4 className="font-label-md text-label-md font-bold text-on-surface">Navigasi</h4>
-              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#fitur">Fitur</a>
-              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#tentang">Tentang</a>
+              <h4 className="text-sm font-bold text-on-surface">Navigasi</h4>
+              <a className="text-sm sm:text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#fitur">Fitur</a>
+              <a className="text-sm sm:text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#tentang">Tentang</a>
             </div>
             <div className="flex flex-col gap-sm">
-              <h4 className="font-label-md text-label-md font-bold text-on-surface">Legal</h4>
-              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Kebijakan Privasi</a>
-              <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Syarat & Ketentuan</a>
+              <h4 className="text-sm font-bold text-on-surface">Legal</h4>
+              <a className="text-sm sm:text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Kebijakan Privasi</a>
+              <a className="text-sm sm:text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Syarat & Ketentuan</a>
             </div>
           </div>
         </div>
         <div className="max-w-container-max mx-auto px-gutter py-md border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center text-center gap-sm">
-          <p className="font-body-md text-body-md text-on-surface-variant opacity-70">
+          <p className="text-xs sm:text-body-md text-on-surface-variant opacity-70">
             © 2026 IncluEdu Indonesia. Memberdayakan setiap guru, mendukung setiap siswa.
           </p>
         </div>
