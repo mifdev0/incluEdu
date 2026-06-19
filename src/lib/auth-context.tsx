@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from './supabase'
 
 interface User {
   id: string
@@ -26,46 +27,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    const stored = localStorage.getItem('incluedu_user')
-    if (stored) {
-      setUser(JSON.parse(stored))
-    }
-    setLoading(false)
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session?.user) await loadProfile(data.session.user.id, data.session.user.email || '')
+      setLoading(false)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) await loadProfile(session.user.id, session.user.email || '')
+      else setUser(null)
+      setLoading(false)
+    })
+    return () => listener.subscription.unsubscribe()
   }, [])
 
-  async function login(identity: string, password: string): Promise<boolean> {
-    if (!identity.trim() || !password.trim()) return false
-
-    const savedUsers = JSON.parse(localStorage.getItem('incluedu_users') || '[]') as User[]
-    const registeredUser = savedUsers.find((item) => item.email.toLowerCase() === identity.trim().toLowerCase())
-    const displayName = identity.includes('@')
-      ? identity.split('@')[0].replace(/[._-]+/g, ' ')
-      : identity.trim()
-    const demoUser: User = registeredUser ?? {
-      id: crypto.randomUUID(),
-      nama: displayName || 'Guru IncluEdu',
-      email: identity.includes('@') ? identity.trim() : `${identity.trim().replace(/\s+/g, '.').toLowerCase()}@demo.incluedu`,
-    }
-
-    setUser(demoUser)
-    localStorage.setItem('incluedu_user', JSON.stringify(demoUser))
-    return true
+  async function loadProfile(id: string, email: string) {
+    const { data } = await supabase.from('profiles').select('nama, sekolah').eq('id', id).maybeSingle()
+    setUser({ id, email, nama: data?.nama || email.split('@')[0], sekolah: data?.sekolah || undefined })
   }
 
-  async function register(nama: string, email: string, _password: string, sekolah?: string): Promise<boolean> {
-    const users = JSON.parse(localStorage.getItem('incluedu_users') || '[]')
-    if (users.some((u: User) => u.email === email)) return false
-    const newUser: User = { id: crypto.randomUUID(), nama, email, sekolah }
-    users.push(newUser)
-    localStorage.setItem('incluedu_users', JSON.stringify(users))
-    setUser(newUser)
-    localStorage.setItem('incluedu_user', JSON.stringify(newUser))
-    return true
+  async function login(email: string, password: string): Promise<boolean> {
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    return !error
   }
 
-  function logout() {
+  async function register(nama: string, email: string, password: string, sekolah?: string): Promise<boolean> {
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: { nama: nama.trim(), sekolah: sekolah?.trim() || null } },
+    })
+    return !error
+  }
+
+  async function logout() {
+    await supabase.auth.signOut()
     setUser(null)
-    localStorage.removeItem('incluedu_user')
     router.push('/login')
   }
 

@@ -5,7 +5,7 @@ export type PpiGoal = {
   indikator: string
   target: number
   capaian: number
-  status: 'berkembang' | 'hampir_tercapai' | 'tercapai' | 'perlu_revisi'
+  status: 'belum_dimulai' | 'berkembang' | 'hampir_tercapai' | 'tercapai' | 'perlu_revisi'
 }
 
 export const PPI_GOALS: Record<string, PpiGoal[]> = {

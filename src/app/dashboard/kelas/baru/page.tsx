@@ -4,15 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { BrandLogo } from '@/components/brand-logo'
-
-const KATEGORI_OPTIONS = [
-  'Lambat memahami materi (butuh penjelasan berulang)',
-  'Kesulitan membaca/menulis meski sudah diajari',
-  'Sulit fokus & duduk diam, impulsif',
-  'Kesulitan bersosialisasi/komunikasi',
-  'Gangguan pendengaran/penglihatan',
-  'Lainnya',
-]
+import { supabase } from '@/lib/supabase'
 
 export default function KelasBaruPage() {
   const { user, loading } = useAuth()
@@ -20,20 +12,30 @@ export default function KelasBaruPage() {
   const [nama, setNama] = useState('')
   const [jenjang, setJenjang] = useState('SMP')
   const [tahunAjaran, setTahunAjaran] = useState('2025/2026')
-  const [siswaList, setSiswaList] = useState<Array<{ nama: string; kategori?: string }>>([])
-  const [namaSiswa, setNamaSiswa] = useState('')
-  const [kategori, setKategori] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => { if (!loading && !user) router.push('/login') }, [user, loading, router])
   if (loading || !user) return null
 
-  function tambahSiswa() {
-    if (!namaSiswa.trim()) return
-    setSiswaList(prev => [...prev, { nama: namaSiswa.trim(), kategori: kategori || undefined }])
-    setNamaSiswa(''); setKategori('')
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user) return
+    setSaving(true)
+    setError('')
+    const { error: insertError } = await supabase.from('kelas').insert({
+      guru_id: user.id,
+      nama: nama.trim(),
+      jenjang,
+      tahun_ajaran: tahunAjaran.trim(),
+    })
+    setSaving(false)
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
+    router.push('/dashboard/siswa/baru')
   }
-
-  function handleSubmit(e: React.FormEvent) { e.preventDefault(); router.push('/dashboard') }
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
@@ -73,35 +75,8 @@ export default function KelasBaruPage() {
             </div>
           </div>
 
-          <div className="bg-surface rounded-3xl p-5 sm:p-lg border border-outline-variant/20 hard-shadow space-y-md">
-            <h3 className="font-headline-sm text-headline-sm text-on-surface">Tambah Siswa</h3>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input type="text" value={namaSiswa} onChange={e => setNamaSiswa(e.target.value)} className="flex-1 px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Nama siswa" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), tambahSiswa())} />
-              <button type="button" onClick={tambahSiswa} className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm">Tambah</button>
-            </div>
-            <div>
-              <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Kebutuhan belajar utama</label>
-              <select value={kategori} onChange={e => setKategori(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low">
-                <option value="">Pilih kebutuhan belajar</option>
-                {KATEGORI_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
-              </select>
-            </div>
-            {siswaList.length > 0 && (
-              <div>
-                <p className="text-on-surface-variant font-body-md text-body-md mb-2">Daftar Siswa ({siswaList.length})</p>
-                <div className="space-y-1.5">
-                  {siswaList.map((s, i) => (
-                    <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 sm:px-5 py-3 bg-surface-container-low rounded-2xl sm:rounded-full">
-                      <span className="text-on-surface font-body-md text-body-md">{s.nama}</span>
-                      {s.kategori && <span className="max-w-[55%] truncate text-xs text-primary bg-primary/10 px-3 py-1 rounded-full font-label-sm">{s.kategori}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button type="submit" className="w-full py-4 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm">Simpan Kelompok</button>
+          {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">{error}</div>}
+          <button type="submit" disabled={saving} className="w-full py-4 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40">{saving ? 'Menyimpan...' : 'Simpan Kelas'}</button>
         </form>
       </main>
     </div>

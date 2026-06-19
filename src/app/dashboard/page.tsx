@@ -5,19 +5,46 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { ArrowRight, BookOpen, CalendarCheck, ClipboardCheck, FileCheck2, Plus, Sparkles, UsersRound } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
+import { supabase } from '@/lib/supabase'
+import { useState } from 'react'
 
-const kelasData = [
-  { id: '1', nama: 'Kelas 7A', jenjang: 'SMP', siswa: 3, observasi: 2, warna: 'bg-[#F1E8FF]', aksen: 'text-primary', namaSiswa: ['Budi', 'Siti', 'Ahmad'] },
-  { id: '2', nama: 'Kelas 7B', jenjang: 'SMP', siswa: 2, observasi: 1, warna: 'bg-[#E3F7ED]', aksen: 'text-secondary', namaSiswa: ['Raka', 'Nadia'] },
-  { id: '3', nama: 'Kelas 8A', jenjang: 'SMP', siswa: 2, observasi: 0, warna: 'bg-[#FFF3C9]', aksen: 'text-tertiary', namaSiswa: ['Dimas', 'Alya'] },
-]
+type ClassCard = { id: string; nama: string; jenjang: string; siswa: number; observasi: number; warna: string; aksen: string; namaSiswa: string[] }
 
 export default function DashboardPage() {
   const { user, loading, logout } = useAuth()
   const router = useRouter()
+  const [kelasData, setKelasData] = useState<ClassCard[]>([])
+  const [activeGoals, setActiveGoals] = useState(0)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
+    if (user) {
+      Promise.all([
+        supabase.from('kelas').select('id, nama, jenjang').order('created_at'),
+        supabase.from('siswa').select('id, nama, kelas_id'),
+        supabase.from('tujuan_ppi').select('id, ppi!inner(siswa!inner(guru_id))').neq('status', 'tercapai'),
+        supabase.from('observasi').select('id, siswa_id, siswa!inner(kelas_id)').gte('tanggal', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
+      ]).then(([classesResult, studentsResult, goalsResult, observationsResult]) => {
+        const students = studentsResult.data || []
+        const observations = observationsResult.data || []
+        const colors = [
+          { warna: 'bg-[#F1E8FF]', aksen: 'text-primary' },
+          { warna: 'bg-[#E3F7ED]', aksen: 'text-secondary' },
+          { warna: 'bg-[#FFF3C9]', aksen: 'text-tertiary' },
+        ]
+        setKelasData((classesResult.data || []).map((item, index) => {
+          const classStudents = students.filter((student) => student.kelas_id === item.id)
+          return {
+            ...item,
+            siswa: classStudents.length,
+            observasi: observations.filter((observation) => (observation.siswa as unknown as { kelas_id: string })?.kelas_id === item.id).length,
+            namaSiswa: classStudents.slice(0, 3).map((student) => student.nama),
+            ...colors[index % colors.length],
+          }
+        }))
+        setActiveGoals(goalsResult.data?.length || 0)
+      })
+    }
   }, [user, loading, router])
 
   if (loading || !user) return null
@@ -65,7 +92,7 @@ export default function DashboardPage() {
           {[
             { label: 'Kelompok pendampingan', value: kelasData.length, icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
             { label: 'Siswa didampingi', value: totalSiswa, icon: UsersRound, color: 'text-secondary', bg: 'bg-secondary-container/40' },
-            { label: 'Tujuan PPI aktif', value: 6, icon: FileCheck2, color: 'text-cyan-700', bg: 'bg-cyan-100' },
+            { label: 'Tujuan PPI aktif', value: activeGoals, icon: FileCheck2, color: 'text-cyan-700', bg: 'bg-cyan-100' },
             { label: 'Observasi minggu ini', value: observasiMingguIni, icon: ClipboardCheck, color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-2xl p-4 sm:p-5 border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
@@ -89,6 +116,13 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-md">
+              {kelasData.length === 0 && (
+                <div className="sm:col-span-2 rounded-3xl border-2 border-dashed border-outline-variant/40 p-8 text-center">
+                  <h3 className="font-bold text-lg">Belum ada kelas</h3>
+                  <p className="text-sm text-on-surface-variant mt-1 mb-4">Buat kelas terlebih dahulu sebelum menambahkan siswa.</p>
+                  <a href="/dashboard/kelas/baru" className="inline-flex px-5 py-3 rounded-full bg-primary text-white font-bold">Buat kelas</a>
+                </div>
+              )}
               {kelasData.map((kelas) => (
               <article key={kelas.id} className={`${kelas.warna} rounded-3xl sm:rounded-[2rem] p-5 sm:p-md border border-white transition-transform duration-300 hover:-translate-y-1`}>
                 <div className="flex items-start justify-between mb-5">

@@ -5,18 +5,19 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
 import { ArrowRight, Brain, Check, Sparkles } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 const categories = [
-  'Slow Learner',
-  'Kesulitan belajar spesifik / Disleksia',
-  'ADHD',
-  'Autisme',
-  'Tunanetra',
-  'Tunarungu',
-  'Hambatan intelektual',
-  'Hambatan fisik atau motorik',
-  'Hambatan komunikasi',
-  'Lainnya',
+  { value: 'slow_learner', label: 'Slow Learner' },
+  { value: 'disleksia', label: 'Kesulitan belajar spesifik / Disleksia' },
+  { value: 'adhd', label: 'ADHD' },
+  { value: 'autisme', label: 'Autisme' },
+  { value: 'tunanetra', label: 'Tunanetra' },
+  { value: 'tunarungu', label: 'Tunarungu' },
+  { value: 'hambatan_intelektual', label: 'Hambatan intelektual' },
+  { value: 'hambatan_motorik', label: 'Hambatan fisik atau motorik' },
+  { value: 'hambatan_komunikasi', label: 'Hambatan komunikasi' },
+  { value: 'lainnya', label: 'Lainnya' },
 ]
 
 const baselineAreas = [
@@ -26,55 +27,117 @@ const baselineAreas = [
   { key: 'motorik', label: 'Sensorik dan motorik' },
 ]
 
-function classifyDescription(description: string) {
-  const text = description.toLowerCase()
-  if (/(fokus|diam|impuls|menyela|bangku|teralihkan)/.test(text)) {
-    return { kategori: 'ADHD', alasan: 'Deskripsi menunjukkan hambatan perhatian, pengendalian impuls, atau regulasi aktivitas. Ini masih berupa saran kebutuhan belajar, bukan diagnosis.' }
-  }
-  if (/(baca|huruf|menulis|mengeja|kata)/.test(text)) {
-    return { kategori: 'Kesulitan belajar spesifik / Disleksia', alasan: 'Hambatan yang paling menonjol berkaitan dengan membaca atau menulis. Guru tetap perlu mengonfirmasi melalui asesmen dan pengamatan lanjutan.' }
-  }
-  if (/(kontak mata|rutinitas|perubahan jadwal|komunikasi|bersosialisasi)/.test(text)) {
-    return { kategori: 'Autisme', alasan: 'Deskripsi menunjukkan kebutuhan dukungan pada komunikasi sosial atau fleksibilitas rutinitas. Saran ini tidak menggantikan pemeriksaan tenaga ahli.' }
-  }
-  if (/(melihat|penglihatan|papan tulis|braille)/.test(text)) {
-    return { kategori: 'Tunanetra', alasan: 'Deskripsi menunjukkan hambatan akses visual sehingga dukungan pembelajaran berbasis audio atau taktil perlu dipertimbangkan.' }
-  }
-  if (/(mendengar|pendengaran|gerak bibir|bahasa isyarat)/.test(text)) {
-    return { kategori: 'Tunarungu', alasan: 'Deskripsi menunjukkan hambatan akses auditori sehingga strategi visual dan komunikasi alternatif perlu dipertimbangkan.' }
-  }
-  return { kategori: 'Slow Learner', alasan: 'Deskripsi mengarah pada kebutuhan waktu belajar, pengulangan, atau instruksi bertahap. Konfirmasikan dengan asesmen kemampuan awal sebelum menetapkan program.' }
-}
-
 export default function TambahSiswaPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [nama, setNama] = useState('')
   const [kelas, setKelas] = useState('')
+  const [kelasList, setKelasList] = useState<Array<{ id: string; nama: string; jenjang: string; tahun_ajaran: string }>>([])
   const [identificationMode, setIdentificationMode] = useState<'known' | 'unsure'>('known')
   const [kategori, setKategori] = useState('')
   const [description, setDescription] = useState('')
-  const [suggestion, setSuggestion] = useState<{ kategori: string; alasan: string } | null>(null)
+  const [suggestion, setSuggestion] = useState<{ kategori: string; keyakinan: string; alasan: string; pertanyaan_lanjutan: string[]; strategi_awal: string[] } | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [baseline, setBaseline] = useState<Record<string, string>>({})
 
-  useEffect(() => { if (!loading && !user) router.push('/login') }, [user, loading, router])
+  useEffect(() => {
+    if (!loading && !user) router.push('/login')
+    if (user) {
+      supabase.from('kelas').select('id, nama, jenjang, tahun_ajaran').order('created_at').then(({ data }) => {
+        setKelasList(data || [])
+      })
+    }
+  }, [user, loading, router])
   if (loading || !user) return null
 
-  function analyze() {
+  async function analyze() {
     if (!description.trim()) return
     setAnalyzing(true)
-    setTimeout(() => {
-      setSuggestion(classifyDescription(description))
+    setError('')
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'classify', description }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'AI gagal menganalisis')
+      setSuggestion(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI gagal menganalisis')
+    } finally {
       setAnalyzing(false)
-    }, 700)
+    }
   }
 
-  function saveStudent() {
-    const draft = { nama, kelas, kategori, description, baseline, createdAt: new Date().toISOString() }
-    localStorage.setItem('incluedu_student_draft', JSON.stringify(draft))
-    router.push('/dashboard/siswa/1/ppi')
+  async function saveStudent() {
+    if (!user) return
+    setSaving(true)
+    setError('')
+    try {
+      const { data: student, error: studentError } = await supabase.from('siswa').insert({
+        guru_id: user.id,
+        kelas_id: kelas,
+        nama: nama.trim(),
+        kategori,
+        deskripsi_kebutuhan: description.trim() || null,
+        sumber_identifikasi: identificationMode === 'unsure' ? 'ai_dikonfirmasi' : 'guru',
+      }).select('id').single()
+      if (studentError) throw studentError
+
+      const { error: baselineError } = await supabase.from('asesmen_awal').insert({
+        siswa_id: student.id,
+        fungsi_belajar: baseline.belajar,
+        komunikasi: baseline.komunikasi,
+        sosial_emosi: baseline.sosial,
+        sensorik_motorik: baseline.motorik,
+      })
+      if (baselineError) throw baselineError
+
+      const aiResponse = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ppi',
+          student: { nama, kategori, deskripsi: description },
+          baseline,
+        }),
+      })
+      const aiPpi = await aiResponse.json()
+      if (!aiResponse.ok) throw new Error(aiPpi.error || 'Gagal menyusun PPI')
+
+      const start = new Date()
+      const end = new Date(start)
+      end.setMonth(end.getMonth() + 6)
+      const { data: ppi, error: ppiError } = await supabase.from('ppi').insert({
+        siswa_id: student.id,
+        periode_mulai: start.toISOString().slice(0, 10),
+        periode_selesai: end.toISOString().slice(0, 10),
+        tujuan_jangka_panjang: aiPpi.tujuan_jangka_panjang,
+        strategi: aiPpi.strategi,
+        tim: [{ peran: 'guru', nama: user.nama }],
+        status: 'draft',
+      }).select('id').single()
+      if (ppiError) throw ppiError
+
+      const goals = aiPpi.tujuan_jangka_pendek.map((goal: { area: string; tujuan: string; indikator: string; target: number }) => ({
+        ppi_id: ppi.id,
+        ...goal,
+        capaian: 0,
+        status: 'belum_dimulai',
+      }))
+      const { error: goalsError } = await supabase.from('tujuan_ppi').insert(goals)
+      if (goalsError) throw goalsError
+
+      router.push(`/dashboard/siswa/${student.id}/ppi`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan siswa')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const canContinueProfile = nama.trim() && kelas.trim() && kategori
@@ -108,7 +171,16 @@ export default function TambahSiswaPage() {
               </div>
               <div>
                 <label className="block font-label-md text-on-surface-variant mb-2">Kelas / kelompok</label>
-                <input value={kelas} onChange={(event) => setKelas(event.target.value)} className="w-full px-5 py-3.5 rounded-full bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Contoh: Kelas 7A" />
+                {kelasList.length > 0 ? (
+                  <select value={kelas} onChange={(event) => setKelas(event.target.value)} className="w-full px-5 py-3.5 rounded-full bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Pilih kelas yang tersedia</option>
+                    {kelasList.map((item) => <option key={item.id} value={item.id}>{item.nama} · {item.jenjang} · {item.tahun_ajaran}</option>)}
+                  </select>
+                ) : (
+                  <div className="rounded-2xl bg-tertiary-fixed/30 p-4 text-sm">
+                    Belum ada kelas. <a href="/dashboard/kelas/baru" className="font-bold text-primary underline">Buat kelas terlebih dahulu</a>.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -131,7 +203,7 @@ export default function TambahSiswaPage() {
                 <label className="block font-label-md text-on-surface-variant mb-2">Kebutuhan belajar utama</label>
                 <select value={kategori} onChange={(event) => setKategori(event.target.value)} className="w-full px-5 py-3.5 rounded-full bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="">Pilih kebutuhan siswa</option>
-                  {categories.map((item) => <option key={item}>{item}</option>)}
+                  {categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                 </select>
               </div>
             ) : (
@@ -150,8 +222,14 @@ export default function TambahSiswaPage() {
                       <div className="w-10 h-10 rounded-2xl bg-white text-primary flex items-center justify-center shrink-0"><Brain className="w-5 h-5" /></div>
                       <div>
                         <div className="text-xs font-bold text-primary">SARAN KEBUTUHAN BELAJAR</div>
-                        <h3 className="font-bold text-lg mt-1">{suggestion.kategori}</h3>
+                        <h3 className="font-bold text-lg mt-1">{categories.find((item) => item.value === suggestion.kategori)?.label || suggestion.kategori}</h3>
+                        <div className="text-xs font-bold text-on-surface-variant mt-1">Keyakinan AI: {suggestion.keyakinan}</div>
                         <p className="text-sm text-on-surface-variant mt-1">{suggestion.alasan}</p>
+                        {suggestion.pertanyaan_lanjutan?.length > 0 && (
+                          <ul className="text-sm text-on-surface-variant mt-3 space-y-1">
+                            {suggestion.pertanyaan_lanjutan.map((item) => <li key={item}>• {item}</li>)}
+                          </ul>
+                        )}
                         <button type="button" onClick={() => setKategori(suggestion.kategori)} className={`mt-4 px-4 py-2 rounded-full font-bold text-sm ${kategori === suggestion.kategori ? 'bg-secondary text-white' : 'bg-white text-primary'}`}>
                           {kategori === suggestion.kategori ? 'Saran digunakan' : 'Gunakan saran ini'}
                         </button>
@@ -163,7 +241,8 @@ export default function TambahSiswaPage() {
               </div>
             )}
 
-            <button type="button" disabled={!canContinueProfile} onClick={() => setStep(2)} className="w-full py-4 rounded-full bg-primary text-white font-bold disabled:opacity-40 inline-flex items-center justify-center gap-2">
+            {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">{error}</div>}
+            <button type="button" disabled={!canContinueProfile || kelasList.length === 0} onClick={() => setStep(2)} className="w-full py-4 rounded-full bg-primary text-white font-bold disabled:opacity-40 inline-flex items-center justify-center gap-2">
               Lanjut ke asesmen awal <ArrowRight className="w-4 h-4" />
             </button>
           </section>
@@ -184,8 +263,9 @@ export default function TambahSiswaPage() {
             ))}
             <div className="grid sm:grid-cols-2 gap-3">
               <button type="button" onClick={() => setStep(1)} className="w-full py-4 rounded-full bg-surface-container-high font-bold">Kembali</button>
-              <button type="button" disabled={!baselineComplete} onClick={saveStudent} className="w-full py-4 rounded-full bg-primary text-white font-bold disabled:opacity-40">Simpan dan susun PPI</button>
+              <button type="button" disabled={!baselineComplete || saving} onClick={saveStudent} className="w-full py-4 rounded-full bg-primary text-white font-bold disabled:opacity-40">{saving ? 'Menyimpan dan menyusun PPI...' : 'Simpan dan susun PPI dengan AI'}</button>
             </div>
+            {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">{error}</div>}
           </section>
         )}
       </main>

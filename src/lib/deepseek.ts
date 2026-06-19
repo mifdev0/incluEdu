@@ -1,5 +1,34 @@
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || ''
-const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
+const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'
+
+export async function deepseekJson<T>(system: string, user: string, maxTokens = 2000): Promise<T> {
+  if (!DEEPSEEK_API_KEY) throw new Error('DEEPSEEK_API_KEY belum dikonfigurasi')
+
+  const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+      messages: [
+        { role: 'system', content: `${system}\nBalas hanya dengan JSON valid.` },
+        { role: 'user', content: user },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+      max_tokens: maxTokens,
+    }),
+    cache: 'no-store',
+  })
+
+  if (!res.ok) throw new Error(`DeepSeek API error: ${res.status} ${await res.text()}`)
+  const data = await res.json()
+  const raw = data.choices?.[0]?.message?.content
+  if (!raw) throw new Error('DeepSeek tidak mengembalikan konten')
+  return JSON.parse(raw) as T
+}
 
 export async function analyzeObservasi(params: {
   namaSiswa: string
@@ -57,28 +86,5 @@ Balas HANYA JSON:
     },
   ]
 
-  const res = await fetch(`${DEEPSEEK_BASE_URL}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages,
-      temperature: 0.4,
-      max_tokens: 2000,
-    }),
-  })
-
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`DeepSeek API error: ${res.status} ${err}`)
-  }
-
-  const data = await res.json()
-  const raw = data.choices?.[0]?.message?.content || ''
-  const clean = raw.replace(/```json|```/g, '').trim()
-  return JSON.parse(clean)
+  return deepseekJson(messages[0].content, messages[1].content)
 }
-

@@ -5,18 +5,35 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { DIMENSI_UNIVERSAL, DIMENSI_KHUSUS, type KategoriABK } from '@/lib/observasi-schema'
 import { BrandLogo } from '@/components/brand-logo'
+import { supabase } from '@/lib/supabase'
 
 export default function ObservasiSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
-  const kategori: KategoriABK = 'slow_learner'
+  const [kategori, setKategori] = useState<KategoriABK>('lainnya')
+  const [studentName, setStudentName] = useState('Siswa')
+  const [week, setWeek] = useState(1)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const dimensiKhusus = DIMENSI_KHUSUS[kategori] || []
   const semuaDimensi = [...DIMENSI_UNIVERSAL, ...dimensiKhusus]
   const [jawaban, setJawaban] = useState<Record<string, string>>({})
   const [catatan, setCatatan] = useState('')
   const [step, setStep] = useState(0)
 
-  useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading, router])
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/login')
+    if (user) {
+      supabase.from('siswa').select('nama, kategori').eq('id', params.id).single().then(({ data }) => {
+        if (data) {
+          setStudentName(data.nama)
+          const supported = ['slow_learner', 'disleksia', 'adhd', 'autisme', 'sensorik', 'lainnya']
+          setKategori((supported.includes(data.kategori) ? data.kategori : 'lainnya') as KategoriABK)
+        }
+      })
+      supabase.from('observasi').select('id', { count: 'exact', head: true }).eq('siswa_id', params.id).then(({ count }) => setWeek((count || 0) + 1))
+    }
+  }, [user, authLoading, router, params.id])
   if (authLoading || !user) return null
 
   const pertanyaanSaatIni = semuaDimensi[step]
@@ -30,7 +47,25 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
     if (step < total - 1) setTimeout(() => setStep(step + 1), 150)
   }
 
-  function handleSubmit(e: React.FormEvent) { e.preventDefault(); router.push(`/dashboard/siswa/${params.id}`) }
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user) return
+    setSaving(true)
+    setError('')
+    const { error: insertError } = await supabase.from('observasi').insert({
+      siswa_id: params.id,
+      guru_id: user.id,
+      minggu_ke: week,
+      jawaban,
+      catatan: catatan.trim() || null,
+    })
+    setSaving(false)
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
+    router.push(`/dashboard/siswa/${params.id}`)
+  }
 
   const FormContent = () => {
     if (step < total) {
@@ -76,8 +111,9 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3">
           <button type="button" onClick={() => setStep(0)} className="w-full px-6 py-3.5 rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-all">Ubah Jawaban</button>
-          <button type="submit" disabled={!semuaTerisi} className="w-full py-3.5 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">Simpan Observasi</button>
+          <button type="submit" disabled={!semuaTerisi || saving} className="w-full py-3.5 rounded-full bg-primary hover:scale-[1.02] active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">{saving ? 'Menyimpan...' : 'Simpan Observasi'}</button>
         </div>
+        {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">{error}</div>}
       </form>
     )
   }
@@ -95,10 +131,10 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
 
       <main className="pt-24 sm:pt-28 max-w-2xl mx-auto px-4 sm:px-gutter pb-xl">
         <div className="flex items-center gap-3 mb-2">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Budi Santoso</h2>
-          <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">Slow Learner</span>
+          <h2 className="font-headline-sm text-headline-sm text-on-surface">{studentName}</h2>
+          <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">{kategori}</span>
         </div>
-        <p className="text-on-surface-variant font-body-md text-body-md mb-lg">Observasi Minggu ke-3</p>
+        <p className="text-on-surface-variant font-body-md text-body-md mb-lg">Observasi Minggu ke-{week}</p>
 
         {/* Progress Bar */}
         <div className="mb-lg">

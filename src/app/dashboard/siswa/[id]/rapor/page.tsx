@@ -5,16 +5,16 @@ import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 import { BrandLogo } from '@/components/brand-logo'
 import { Sparkles, Check } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export default function RaporSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading, router])
-  if (authLoading || !user) return null
-
-  const analisis = {
+  const defaultAnalysis = {
     trend: 'membaik' as const,
     nilai_kognitif: 78, nilai_sosial: 72, nilai_emosional: 85, nilai_rata_rata: 78,
     highlights: [
@@ -38,8 +38,41 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
       'Berikan pujian spesifik ketika Budi berhasil menyelesaikan tugas sendiri',
     ],
   }
+  const [analisis, setAnalisis] = useState(defaultAnalysis)
+  if (authLoading || !user) return null
 
-  function handleGenerate() { setLoading(true); setTimeout(() => setLoading(false), 2000) }
+  async function handleGenerate() {
+    setLoading(true)
+    setError('')
+    try {
+      const [{ data: student }, { data: observations }, { data: ppi }] = await Promise.all([
+        supabase.from('siswa').select('nama, kategori, deskripsi_kebutuhan').eq('id', params.id).single(),
+        supabase.from('observasi').select('tanggal, minggu_ke, jawaban, catatan').eq('siswa_id', params.id).order('tanggal'),
+        supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      ])
+      const { data: goals } = ppi
+        ? await supabase.from('tujuan_ppi').select('area, tujuan, indikator, target, capaian, status').eq('ppi_id', ppi.id)
+        : { data: [] }
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'report', student, goals, observations }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Analisis AI gagal')
+      setAnalisis(result)
+      await supabase.from('analisis_ai').insert({
+        siswa_id: params.id,
+        periode: new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+        hasil: result,
+        model: 'deepseek-chat',
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Analisis AI gagal')
+    } finally {
+      setLoading(false)
+    }
+  }
   async function handleCopyNarasi() { await navigator.clipboard.writeText(analisis.rapor_narasi); alert('Narasi rapor berhasil disalin!') }
 
   return (
@@ -68,6 +101,7 @@ Dengan dukungan yang konsisten, Budi memiliki potensi besar untuk terus berkemba
           </button>
           <button onClick={handleCopyNarasi} className="w-full px-6 py-3 rounded-full bg-surface-container-high hover:bg-surface-container-higher text-on-surface font-label-md text-label-md transition-all">Salin Narasi</button>
         </div>
+        {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container mb-md">{error}</div>}
 
         <div className="space-y-lg">
           {/* Nilai */}
