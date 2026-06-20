@@ -3,22 +3,52 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
-import { DIMENSI_UNIVERSAL, DIMENSI_KHUSUS, type KategoriABK } from '@/lib/observasi-schema'
+import { DIMENSI_UNIVERSAL, DIMENSI_KHUSUS, type DimensiItem, type KategoriABK } from '@/lib/observasi-schema'
 import { BrandLogo } from '@/components/brand-logo'
 import { supabase } from '@/lib/supabase'
 import { FullPageLoading } from '@/components/loading-state'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
+import { normalizeObservationCategory } from '@/lib/observation-progress'
+
+type ActiveGoal = {
+  id: string
+  area: string
+  tujuan: string
+  indikator: string
+  target: number
+}
+
+const goalScore: Record<string, number> = {
+  belum_terlihat: 0,
+  banyak_bantuan: 35,
+  sedikit_bantuan: 65,
+  mandiri_konsisten: 100,
+}
 
 export default function ObservasiSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [kategori, setKategori] = useState<KategoriABK>('lainnya')
+  const [categoryLabel, setCategoryLabel] = useState('lainnya')
   const [studentName, setStudentName] = useState('Siswa')
+  const [activeGoals, setActiveGoals] = useState<ActiveGoal[]>([])
   const [week, setWeek] = useState(1)
+  const [dataLoading, setDataLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const dimensiKhusus = DIMENSI_KHUSUS[kategori] || []
-  const semuaDimensi = [...DIMENSI_UNIVERSAL, ...dimensiKhusus]
+  const goalDimensions: DimensiItem[] = activeGoals.map((goal) => ({
+    key: `goal_${goal.id}`,
+    label: `Tujuan PPI · ${goal.area}`,
+    pertanyaan: `${goal.tujuan} Indikator: ${goal.indikator}`,
+    opsi: [
+      { value: 'belum_terlihat', label: 'Belum terlihat pada kegiatan ini', bobot: 0 },
+      { value: 'banyak_bantuan', label: 'Tercapai dengan banyak bantuan', bobot: 35 },
+      { value: 'sedikit_bantuan', label: 'Tercapai dengan sedikit bantuan', bobot: 65 },
+      { value: 'mandiri_konsisten', label: 'Tercapai mandiri dan konsisten', bobot: 100 },
+    ],
+  }))
+  const semuaDimensi = [...DIMENSI_UNIVERSAL, ...dimensiKhusus, ...goalDimensions]
   const [jawaban, setJawaban] = useState<Record<string, string>>({})
   const [catatan, setCatatan] = useState('')
   const [step, setStep] = useState(0)
@@ -26,18 +56,35 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
-    if (user) {
-      supabase.from('siswa').select('nama, kategori').eq('id', params.id).single().then(({ data }) => {
-        if (data) {
-          setStudentName(data.nama)
-          const supported = ['slow_learner', 'disleksia', 'adhd', 'autisme', 'sensorik', 'lainnya']
-          setKategori((supported.includes(data.kategori) ? data.kategori : 'lainnya') as KategoriABK)
-        }
-      })
-      supabase.from('observasi').select('id', { count: 'exact', head: true }).eq('siswa_id', params.id).then(({ count }) => setWeek((count || 0) + 1))
+    if (!user) return
+
+    async function loadObservationData() {
+      const [studentResult, countResult, ppiResult] = await Promise.all([
+        supabase.from('siswa').select('nama, kategori').eq('id', params.id).single(),
+        supabase.from('observasi').select('id', { count: 'exact', head: true }).eq('siswa_id', params.id),
+        supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      ])
+      if (studentResult.data) {
+        setStudentName(studentResult.data.nama)
+        setCategoryLabel(studentResult.data.kategori)
+        setKategori(normalizeObservationCategory(studentResult.data.kategori))
+      }
+      setWeek((countResult.count || 0) + 1)
+      if (ppiResult.data) {
+        const { data: goals } = await supabase
+          .from('tujuan_ppi')
+          .select('id, area, tujuan, indikator, target')
+          .eq('ppi_id', ppiResult.data.id)
+          .neq('status', 'tercapai')
+          .order('created_at')
+        setActiveGoals((goals || []) as ActiveGoal[])
+      }
+      setDataLoading(false)
     }
+
+    void loadObservationData()
   }, [user, authLoading, router, params.id])
-  if (authLoading || !user) return <FullPageLoading label="Menyiapkan observasi..." />
+  if (authLoading || !user || dataLoading) return <FullPageLoading label="Menyiapkan observasi..." />
 
   const pertanyaanSaatIni = semuaDimensi[step]
   const total = semuaDimensi.length
@@ -58,19 +105,51 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
     if (!user) return
     setSaving(true)
     setError('')
-    const { error: insertError } = await supabase.from('observasi').insert({
-      siswa_id: params.id,
-      guru_id: user.id,
-      minggu_ke: week,
-      jawaban,
-      catatan: catatan.trim() || null,
-    })
-    setSaving(false)
-    if (insertError) {
-      setError(insertError.message)
-      return
+    try {
+      const { error: insertError } = await supabase.from('observasi').insert({
+        siswa_id: params.id,
+        guru_id: user.id,
+        minggu_ke: week,
+        jawaban,
+        catatan: catatan.trim() || null,
+      })
+      if (insertError) throw insertError
+
+      if (activeGoals.length > 0) {
+        const { data: observations, error: observationsError } = await supabase
+          .from('observasi')
+          .select('jawaban')
+          .eq('siswa_id', params.id)
+        if (observationsError) throw observationsError
+
+        const updates = activeGoals.map((goal) => {
+          const values = (observations || [])
+            .map((observation) => (observation.jawaban as Record<string, string> | null)?.[`goal_${goal.id}`])
+            .filter((value): value is string => Boolean(value && value in goalScore))
+            .map((value) => goalScore[value])
+          const capaian = values.length > 0
+            ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+            : 0
+          const status = capaian >= goal.target
+            ? 'tercapai'
+            : capaian >= goal.target * 0.8
+              ? 'hampir_tercapai'
+              : capaian > 0
+                ? 'berkembang'
+                : 'belum_dimulai'
+          return supabase.from('tujuan_ppi').update({ capaian, status }).eq('id', goal.id)
+        })
+        const updateResults = await Promise.all(updates)
+        const updateError = updateResults.find((result) => result.error)?.error
+        if (updateError) throw updateError
+      }
+
+      setCompleted(true)
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Observasi gagal disimpan.')
+    } finally {
+      setSaving(false)
     }
-    setCompleted(true)
   }
 
   const FormContent = () => {
@@ -140,7 +219,7 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
           </div>
           <h1 className="font-headline-sm text-headline-sm mt-5">Observasi berhasil disimpan</h1>
           <p className="text-on-surface-variant mt-2 leading-relaxed">
-            Data minggu ke-{week} sudah masuk ke profil {studentName}. Grafik akan terbentuk setelah tersedia minimal dua observasi.
+            Data minggu ke-{week} sudah masuk ke profil {studentName}. Grafik dan capaian tujuan PPI telah diperbarui dari jawaban ini.
           </p>
           <div className="grid sm:grid-cols-2 gap-3 mt-6">
             <a href={`/dashboard/siswa/${params.id}`} className="px-5 py-3.5 rounded-full bg-primary text-white font-bold inline-flex items-center justify-center gap-2">
@@ -169,7 +248,7 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
       <main className="pt-24 sm:pt-28 max-w-2xl mx-auto px-4 sm:px-gutter pb-xl">
         <div className="flex items-center gap-3 mb-2">
           <h2 className="font-headline-sm text-headline-sm text-on-surface">{studentName}</h2>
-          <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">{kategori}</span>
+          <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">{categoryLabel.replaceAll('_', ' ')}</span>
         </div>
         <p className="text-on-surface-variant font-body-md text-body-md mb-lg">Observasi Minggu ke-{week}</p>
 

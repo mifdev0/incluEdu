@@ -1,6 +1,7 @@
 export type NormalizedAnalysis = {
   trend: 'membaik' | 'stagnan' | 'menurun'
   nilai_kognitif: number
+  nilai_fokus: number
   nilai_sosial: number
   nilai_emosional: number
   nilai_rata_rata: number
@@ -54,6 +55,7 @@ export function normalizeAnalysis(value: unknown): NormalizedAnalysis {
   return {
     trend,
     nilai_kognitif: kognitif,
+    nilai_fokus: score(source.nilai_fokus),
     nilai_sosial: sosial,
     nilai_emosional: emosional,
     nilai_rata_rata: providedAverage || Math.round((kognitif + sosial + emosional) / 3),
@@ -62,5 +64,27 @@ export function normalizeAnalysis(value: unknown): NormalizedAnalysis {
     rekomendasi_guru: toStringList(source.rekomendasi_guru),
     rapor_narasi: String(source.rapor_narasi || '').trim(),
     rekomendasi_ortu: toStringList(source.rekomendasi_ortu),
+  }
+}
+
+export function applyObservationScores(
+  analysis: NormalizedAnalysis,
+  scores: {
+    trend: NormalizedAnalysis['trend']
+    kognitif: number
+    fokus: number
+    sosial: number
+    emosi: number
+  } | null,
+): NormalizedAnalysis {
+  if (!scores) return analysis
+  return {
+    ...analysis,
+    trend: scores.trend,
+    nilai_kognitif: scores.kognitif,
+    nilai_fokus: scores.fokus,
+    nilai_sosial: scores.sosial,
+    nilai_emosional: scores.emosi,
+    nilai_rata_rata: Math.round((scores.kognitif + scores.fokus + scores.sosial + scores.emosi) / 4),
   }
 }

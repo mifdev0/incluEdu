@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { deepseekJson } from '@/lib/deepseek'
-import { normalizeAnalysis } from '@/lib/analysis-normalizer'
+import { applyObservationScores, normalizeAnalysis } from '@/lib/analysis-normalizer'
+import { observationsToProgress, progressTrend, type ObservationRow } from '@/lib/observation-progress'
 
 export const runtime = 'nodejs'
 
@@ -64,7 +65,19 @@ Observasi: ${JSON.stringify(body.observations)}
 Kembalikan JSON: trend, nilai_kognitif, nilai_sosial, nilai_emosional, nilai_rata_rata, highlights, concerns, rekomendasi_guru, rapor_narasi, rekomendasi_ortu.`,
         2400
       )
-      return NextResponse.json(normalizeAnalysis(result))
+      const normalized = normalizeAnalysis(result)
+      const progress = observationsToProgress(
+        (Array.isArray(body.observations) ? body.observations : []) as ObservationRow[],
+        String(body.student?.kategori || 'lainnya'),
+      )
+      const latest = progress[progress.length - 1]
+      return NextResponse.json(applyObservationScores(normalized, latest ? {
+        trend: progressTrend(progress),
+        kognitif: latest.kognitif,
+        fokus: latest.fokus,
+        sosial: latest.sosial,
+        emosi: latest.emosi,
+      } : null))
     }
 
     return NextResponse.json({ error: 'Action tidak didukung' }, { status: 400 })

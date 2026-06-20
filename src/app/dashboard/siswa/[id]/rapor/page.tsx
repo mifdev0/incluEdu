@@ -7,7 +7,8 @@ import { BrandLogo } from '@/components/brand-logo'
 import { Sparkles, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { FullPageLoading } from '@/components/loading-state'
-import { normalizeAnalysis, type NormalizedAnalysis } from '@/lib/analysis-normalizer'
+import { applyObservationScores, normalizeAnalysis, type NormalizedAnalysis } from '@/lib/analysis-normalizer'
+import { observationsToProgress, progressTrend, type ObservationRow } from '@/lib/observation-progress'
 
 export default function RaporSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
@@ -24,9 +25,23 @@ export default function RaporSiswaPage({ params }: { params: { id: string } }) {
     Promise.all([
       supabase.from('siswa').select('nama, kategori').eq('id', params.id).single(),
       supabase.from('analisis_ai').select('hasil').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    ]).then(([studentResult, analysisResult]) => {
+      supabase.from('observasi').select('minggu_ke, tanggal, jawaban').eq('siswa_id', params.id).order('minggu_ke'),
+    ]).then(([studentResult, analysisResult, observationsResult]) => {
       if (studentResult.data) setStudent(studentResult.data)
-      if (analysisResult.data?.hasil) setAnalisis(normalizeAnalysis(analysisResult.data.hasil))
+      if (analysisResult.data?.hasil && studentResult.data) {
+        const progress = observationsToProgress(
+          (observationsResult.data || []) as ObservationRow[],
+          studentResult.data.kategori,
+        )
+        const latest = progress[progress.length - 1]
+        setAnalisis(applyObservationScores(normalizeAnalysis(analysisResult.data.hasil), latest ? {
+          trend: progressTrend(progress),
+          kognitif: latest.kognitif,
+          fokus: latest.fokus,
+          sosial: latest.sosial,
+          emosi: latest.emosi,
+        } : null))
+      }
       setDataLoading(false)
     })
   }, [user, authLoading, router, params.id])
@@ -44,6 +59,9 @@ export default function RaporSiswaPage({ params }: { params: { id: string } }) {
       const { data: goals } = ppi
         ? await supabase.from('tujuan_ppi').select('area, tujuan, indikator, target, capaian, status').eq('ppi_id', ppi.id)
         : { data: [] }
+      if (!observations || observations.length === 0) {
+        throw new Error('Belum ada observasi yang dapat dianalisis.')
+      }
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,9 +126,10 @@ export default function RaporSiswaPage({ params }: { params: { id: string } }) {
           {/* Nilai */}
           <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">
             <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md">Nilai Angka</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
                 { label: 'Kognitif', value: analisis.nilai_kognitif, color: 'text-primary' },
+                { label: 'Fokus', value: analisis.nilai_fokus, color: 'text-cyan-700' },
                 { label: 'Sosial', value: analisis.nilai_sosial, color: 'text-on-secondary-container' },
                 { label: 'Emosional', value: analisis.nilai_emosional, color: 'text-tertiary' },
                 { label: 'Rata-rata', value: analisis.nilai_rata_rata, color: 'text-on-surface' },

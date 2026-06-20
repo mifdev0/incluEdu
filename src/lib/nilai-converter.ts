@@ -16,6 +16,12 @@ function buildBobotMap() {
   }
 }
 buildBobotMap()
+Object.assign(bobotMap, {
+  belum_terlihat: 0,
+  banyak_bantuan: 35,
+  sedikit_bantuan: 65,
+  mandiri_konsisten: 100,
+})
 
 export function getBobot(value: string): number {
   return bobotMap[value] ?? 50
