@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
-import { CalendarDays, CheckCircle2, ClipboardList, Pencil, Target, Users } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ClipboardList, Pencil, Plus, Target, Users, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
-import { FullPageLoading } from '@/components/loading-state'
+import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
 
 const statusMap = {
   belum_dimulai: { label: 'Belum dimulai', style: 'bg-surface-container-high text-on-surface-variant' },
@@ -27,6 +27,16 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [daysUntilEvaluation, setDaysUntilEvaluation] = useState<number | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [hasPpi, setHasPpi] = useState(false)
+  const [ppiId, setPpiId] = useState('')
+  const [goalModalOpen, setGoalModalOpen] = useState(false)
+  const [savingGoal, setSavingGoal] = useState(false)
+  const [goalError, setGoalError] = useState('')
+  const [goalForm, setGoalForm] = useState({
+    area: '',
+    tujuan: '',
+    indikator: '',
+    target: 80,
+  })
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -38,6 +48,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           return
         }
         setHasPpi(true)
+        setPpiId(data.id)
         setStrategies(Array.isArray(data.strategi) ? data.strategi as string[] : [])
         setPeriod(`${data.periode_mulai} – ${data.periode_selesai}`)
         setDaysUntilEvaluation(Math.max(0, Math.ceil((new Date(data.periode_selesai).getTime() - Date.now()) / 86400000)))
@@ -50,6 +61,49 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   if (loading || !user || dataLoading) return <FullPageLoading label="Memuat rancangan PPI..." />
 
   const displayName = studentName || 'Siswa'
+
+  async function handleAddGoal(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setGoalError('')
+
+    if (!ppiId) {
+      setGoalError('Rancangan PPI belum tersedia.')
+      return
+    }
+
+    const area = goalForm.area.trim()
+    const tujuan = goalForm.tujuan.trim()
+    const indikator = goalForm.indikator.trim()
+    if (!area || !tujuan || !indikator) {
+      setGoalError('Area, tujuan, dan indikator wajib diisi.')
+      return
+    }
+
+    setSavingGoal(true)
+    const { data, error } = await supabase
+      .from('tujuan_ppi')
+      .insert({
+        ppi_id: ppiId,
+        area,
+        tujuan,
+        indikator,
+        target: goalForm.target,
+        capaian: 0,
+        status: 'belum_dimulai',
+      })
+      .select('id, area, tujuan, indikator, target, capaian, status')
+      .single()
+
+    setSavingGoal(false)
+    if (error || !data) {
+      setGoalError(error?.message || 'Tujuan belum berhasil disimpan.')
+      return
+    }
+
+    setGoals((current) => [...current, data as PpiGoal])
+    setGoalForm({ area: '', tujuan: '', indikator: '', target: 80 })
+    setGoalModalOpen(false)
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
@@ -122,7 +176,18 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                 </article>
               )
             })}
-            <button className="w-full py-4 rounded-full border-2 border-dashed border-primary/30 text-primary font-bold">+ Tambah tujuan jangka pendek</button>
+            <button
+              type="button"
+              onClick={() => {
+                setGoalError('')
+                setGoalModalOpen(true)
+              }}
+              disabled={!hasPpi}
+              className="w-full py-4 rounded-full border-2 border-dashed border-primary/30 text-primary font-bold inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus className="w-5 h-5" />
+              Tambah tujuan jangka pendek
+            </button>
           </section>
 
           <aside className="space-y-4">
@@ -147,6 +212,79 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           </aside>
         </div>
       </main>
+
+      {goalModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/35 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="add-goal-title">
+          <form onSubmit={handleAddGoal} className="w-full max-w-xl max-h-full overflow-y-auto rounded-3xl bg-white p-5 sm:p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-primary">TUJUAN PPI</span>
+                <h2 id="add-goal-title" className="mt-1 text-xl font-bold text-on-surface">Tambah tujuan jangka pendek</h2>
+                <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">Buat tujuan yang spesifik, dapat diamati, dan dapat diukur melalui observasi.</p>
+              </div>
+              <button type="button" onClick={() => setGoalModalOpen(false)} disabled={savingGoal} className="shrink-0 p-2 rounded-full hover:bg-surface-container disabled:opacity-40" aria-label="Tutup">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <label className="block">
+                <span className="text-sm font-bold text-on-surface">Area perkembangan</span>
+                <input
+                  value={goalForm.area}
+                  onChange={(event) => setGoalForm((current) => ({ ...current, area: event.target.value }))}
+                  placeholder="Contoh: Membaca permulaan"
+                  className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-bold text-on-surface">Tujuan jangka pendek</span>
+                <textarea
+                  value={goalForm.tujuan}
+                  onChange={(event) => setGoalForm((current) => ({ ...current, tujuan: event.target.value }))}
+                  placeholder={`Contoh: ${displayName} mampu membaca lima suku kata pola KV tanpa mengeja.`}
+                  rows={3}
+                  className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-bold text-on-surface">Indikator keberhasilan</span>
+                <textarea
+                  value={goalForm.indikator}
+                  onChange={(event) => setGoalForm((current) => ({ ...current, indikator: event.target.value }))}
+                  placeholder="Contoh: Jumlah suku kata yang dibaca benar tanpa bantuan."
+                  rows={2}
+                  className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary"
+                />
+              </label>
+              <label className="block">
+                <span className="flex items-center justify-between gap-4 text-sm font-bold text-on-surface">
+                  Target keberhasilan
+                  <span className="text-primary">{goalForm.target}%</span>
+                </span>
+                <input
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="5"
+                  value={goalForm.target}
+                  onChange={(event) => setGoalForm((current) => ({ ...current, target: Number(event.target.value) }))}
+                  className="mt-3 w-full accent-primary"
+                />
+              </label>
+            </div>
+
+            {goalError && <p className="mt-4 rounded-2xl bg-error-container/60 px-4 py-3 text-sm font-medium text-error">{goalError}</p>}
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setGoalModalOpen(false)} disabled={savingGoal} className="py-3 rounded-full bg-surface-container-high font-bold disabled:opacity-40">Batal</button>
+              <button type="submit" disabled={savingGoal} className="py-3 rounded-full bg-primary text-white font-bold disabled:opacity-60">
+                {savingGoal ? <LoadingSpinner label="Menyimpan..." /> : 'Simpan tujuan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

@@ -60,11 +60,16 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
     if (!user) return
 
     async function loadObservationData() {
-      const [studentResult, countResult, ppiResult] = await Promise.all([
+      const [studentResult, countResult, ppiResult, guideResult] = await Promise.all([
         supabase.from('siswa').select('nama, kategori').eq('id', params.id).single(),
         supabase.from('observasi').select('id', { count: 'exact', head: true }).eq('siswa_id', params.id),
         supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('panduan_konfirmasi').select('dikonfirmasi_at').eq('siswa_id', params.id).maybeSingle(),
       ])
+      if (!guideResult.data?.dikonfirmasi_at) {
+        router.replace(`/dashboard/siswa/${params.id}/panduan`)
+        return
+      }
       if (studentResult.data) {
         setStudentName(studentResult.data.nama)
         setCategoryLabel(studentResult.data.kategori)
