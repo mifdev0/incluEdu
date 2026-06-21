@@ -6,4 +6,10 @@ export type PpiGoal = {
   target: number
   capaian: number
   status: 'belum_dimulai' | 'berkembang' | 'hampir_tercapai' | 'tercapai' | 'perlu_revisi'
+  aktivitas?: string | null
+  media_alat?: string | null
+  pelaksana?: string | null
+  frekuensi?: string | null
+  metode_evaluasi?: string | null
+  langkah_tugas?: string[]
 }

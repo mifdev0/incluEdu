@@ -16,14 +16,26 @@ type ActiveGoal = {
   tujuan: string
   indikator: string
   target: number
+  langkah_tugas: string[]
 }
 
-const goalScore: Record<string, number> = {
+const legacyGoalScore: Record<string, number> = {
   belum_terlihat: 0,
   banyak_bantuan: 35,
   sedikit_bantuan: 65,
   mandiri_konsisten: 100,
 }
+
+const assistanceOptions = [
+  { value: 'bf', label: 'Bf — Bantuan fisik penuh', bobot: 20 },
+  { value: 'bv', label: 'Bv — Bantuan verbal', bobot: 40 },
+  { value: 'd', label: 'D — Demonstrasi / contoh langsung', bobot: 55 },
+  { value: 'p', label: 'P — Petunjuk atau gesture minimal', bobot: 75 },
+  { value: 'inkonsisten', label: '+/- — Mampu tetapi belum konsisten', bobot: 85 },
+  { value: 'mandiri', label: '+ — Mandiri, aman, dan konsisten', bobot: 100 },
+]
+
+const assistanceScore = Object.fromEntries(assistanceOptions.map((option) => [option.value, option.bobot]))
 
 export default function ObservasiSiswaPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
@@ -37,17 +49,17 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const dimensiKhusus = DIMENSI_KHUSUS[kategori] || []
-  const goalDimensions: DimensiItem[] = activeGoals.map((goal) => ({
-    key: `goal_${goal.id}`,
-    label: `Tujuan PPI · ${goal.area}`,
-    pertanyaan: `${goal.tujuan} Indikator: ${goal.indikator}`,
-    opsi: [
-      { value: 'belum_terlihat', label: 'Belum terlihat pada kegiatan ini', bobot: 0 },
-      { value: 'banyak_bantuan', label: 'Tercapai dengan banyak bantuan', bobot: 35 },
-      { value: 'sedikit_bantuan', label: 'Tercapai dengan sedikit bantuan', bobot: 65 },
-      { value: 'mandiri_konsisten', label: 'Tercapai mandiri dan konsisten', bobot: 100 },
-    ],
-  }))
+  const goalDimensions: DimensiItem[] = activeGoals.flatMap((goal) => {
+    const taskSteps = Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0
+      ? goal.langkah_tugas
+      : [goal.indikator]
+    return taskSteps.map((task, index) => ({
+      key: `task_${goal.id}_${index}`,
+      label: `Analisis tugas · ${goal.area}`,
+      pertanyaan: `${task} Tingkat bantuan apa yang dibutuhkan ${studentName} pada langkah ini?`,
+      opsi: assistanceOptions,
+    }))
+  })
   const semuaDimensi = [...DIMENSI_UNIVERSAL, ...dimensiKhusus, ...goalDimensions]
   const [jawaban, setJawaban] = useState<Record<string, string>>({})
   const [catatan, setCatatan] = useState('')
@@ -79,9 +91,9 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
       if (ppiResult.data) {
         const { data: goals } = await supabase
           .from('tujuan_ppi')
-          .select('id, area, tujuan, indikator, target')
+          .select('id, area, tujuan, indikator, target, langkah_tugas')
           .eq('ppi_id', ppiResult.data.id)
-          .neq('status', 'tercapai')
+          .in('status', ['belum_dimulai', 'berkembang', 'hampir_tercapai'])
           .order('created_at')
         setActiveGoals((goals || []) as ActiveGoal[])
       }
@@ -129,10 +141,17 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
         if (observationsError) throw observationsError
 
         const updates = activeGoals.map((goal) => {
-          const values = (observations || [])
-            .map((observation) => (observation.jawaban as Record<string, string> | null)?.[`goal_${goal.id}`])
-            .filter((value): value is string => Boolean(value && value in goalScore))
-            .map((value) => goalScore[value])
+          const taskCount = Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? goal.langkah_tugas.length : 1
+          const values = (observations || []).flatMap((observation) => {
+            const answers = observation.jawaban as Record<string, string> | null
+            if (!answers) return []
+            const taskValues = Array.from({ length: taskCount }, (_, index) => answers[`task_${goal.id}_${index}`])
+              .filter((value): value is string => Boolean(value && value in assistanceScore))
+              .map((value) => assistanceScore[value])
+            const legacyValue = answers[`goal_${goal.id}`]
+            if (taskValues.length > 0) return taskValues
+            return legacyValue && legacyValue in legacyGoalScore ? [legacyGoalScore[legacyValue]] : []
+          })
           const capaian = values.length > 0
             ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
             : 0

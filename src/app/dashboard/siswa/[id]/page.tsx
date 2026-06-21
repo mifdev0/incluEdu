@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BrandLogo } from '@/components/brand-logo'
 import { ProgressChart } from '@/components/progress-chart'
-import { ArrowUpRight, Brain, Heart, MessageCircle, Target } from 'lucide-react'
+import { ArrowUpRight, Brain, Heart, History, MessageCircle, ShieldCheck, Sparkles, Target } from 'lucide-react'
 import { FullPageLoading } from '@/components/loading-state'
 import { supabase } from '@/lib/supabase'
 import { observationsToProgress, progressTrend, type ObservationRow } from '@/lib/observation-progress'
@@ -18,6 +18,23 @@ type Student = {
   kategori: string
   deskripsi_kebutuhan: string | null
   kelas_id: string
+  kekuatan_minat: string | null
+  riwayat_perkembangan: string | null
+  layanan_sebelumnya: string | null
+  sumber_rujukan: string | null
+  akomodasi: string[]
+}
+
+type Baseline = {
+  fungsi_belajar: string
+  membaca: string | null
+  menulis: string | null
+  matematika: string | null
+  komunikasi: string
+  sosial_emosi: string
+  sensorik_motorik: string
+  konsentrasi: string | null
+  kemandirian: string | null
 }
 
 export default function ProfilSiswaPage({ params }: { params: { id: string } }) {
@@ -30,16 +47,18 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const [error, setError] = useState('')
   const [observations, setObservations] = useState<ObservationRow[]>([])
   const [selectedScore, setSelectedScore] = useState<'average' | ScoreAspect | null>(null)
+  const [baseline, setBaseline] = useState<Baseline | null>(null)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
     if (!user) return
 
     Promise.all([
-      supabase.from('siswa').select('id, nama, kategori, deskripsi_kebutuhan, kelas_id').eq('id', params.id).single(),
+      supabase.from('siswa').select('id, nama, kategori, deskripsi_kebutuhan, kelas_id, kekuatan_minat, riwayat_perkembangan, layanan_sebelumnya, sumber_rujukan, akomodasi').eq('id', params.id).single(),
       supabase.from('observasi').select('minggu_ke, tanggal, jawaban').eq('siswa_id', params.id).order('minggu_ke'),
       supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    ]).then(async ([studentResult, observationsResult, ppiResult]) => {
+      supabase.from('asesmen_awal').select('fungsi_belajar, membaca, menulis, matematika, komunikasi, sosial_emosi, sensorik_motorik, konsentrasi, kemandirian').eq('siswa_id', params.id).maybeSingle(),
+    ]).then(async ([studentResult, observationsResult, ppiResult, baselineResult]) => {
       if (studentResult.error) {
         setError(studentResult.error.message)
       } else {
@@ -52,6 +71,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
         const { count } = await supabase.from('tujuan_ppi').select('id', { count: 'exact', head: true }).eq('ppi_id', ppiResult.data.id)
         setGoalCount(count || 0)
       }
+      if (baselineResult.data) setBaseline(baselineResult.data as Baseline)
       setDataLoading(false)
     })
   }, [user, loading, router, params.id])
@@ -110,6 +130,56 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
           </div>
           <p className="text-on-surface-variant">{student.deskripsi_kebutuhan || 'Belum ada deskripsi kebutuhan tambahan.'}</p>
         </div>
+
+        <section className="grid md:grid-cols-2 gap-3 mb-md">
+          <div className="rounded-3xl bg-white border border-outline-variant/20 p-5">
+            <div className="flex items-center gap-2 text-primary"><Sparkles className="w-5 h-5" /><h2 className="font-bold">Kekuatan dan minat</h2></div>
+            <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">{student.kekuatan_minat || 'Belum dicatat.'}</p>
+          </div>
+          <div className="rounded-3xl bg-white border border-outline-variant/20 p-5">
+            <div className="flex items-center gap-2 text-primary"><History className="w-5 h-5" /><h2 className="font-bold">Riwayat dan layanan</h2></div>
+            <div className="mt-3 space-y-2 text-sm text-on-surface-variant">
+              <p><span className="font-bold text-on-surface">Perkembangan:</span> {student.riwayat_perkembangan || 'Belum dicatat.'}</p>
+              <p><span className="font-bold text-on-surface">Layanan sebelumnya:</span> {student.layanan_sebelumnya || 'Belum dicatat.'}</p>
+              <p><span className="font-bold text-on-surface">Sumber rujukan:</span> {student.sumber_rujukan || 'Belum dicatat.'}</p>
+            </div>
+          </div>
+          <div className="md:col-span-2 rounded-3xl bg-[#E4F8EE] border border-secondary/10 p-5">
+            <div className="flex items-center gap-2 text-secondary"><ShieldCheck className="w-5 h-5" /><h2 className="font-bold text-on-surface">Akomodasi pembelajaran</h2></div>
+            {Array.isArray(student.akomodasi) && student.akomodasi.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {student.akomodasi.map((item) => <span key={item} className="rounded-full bg-white px-3 py-2 text-xs font-bold text-on-surface">{item}</span>)}
+              </div>
+            ) : <p className="mt-3 text-sm text-on-surface-variant">Belum ada akomodasi yang dicatat.</p>}
+          </div>
+        </section>
+
+        {baseline && (
+          <section className="rounded-3xl bg-white border border-outline-variant/20 p-5 sm:p-md mb-md">
+            <div>
+              <span className="text-xs font-bold text-primary">ASESMEN KEMAMPUAN AWAL</span>
+              <h2 className="mt-1 font-headline-sm text-headline-sm">Titik awal penyusunan PPI</h2>
+            </div>
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+              {[
+                ['Fungsi belajar', baseline.fungsi_belajar],
+                ['Membaca', baseline.membaca],
+                ['Menulis', baseline.menulis],
+                ['Matematika', baseline.matematika],
+                ['Komunikasi', baseline.komunikasi],
+                ['Sosial dan emosi', baseline.sosial_emosi],
+                ['Sensorik dan motorik', baseline.sensorik_motorik],
+                ['Konsentrasi', baseline.konsentrasi],
+                ['Kemandirian', baseline.kemandirian],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl bg-surface-container-low p-3">
+                  <div className="text-xs text-on-surface-variant">{label}</div>
+                  <div className="mt-1 text-sm font-bold">{value || 'Belum dinilai'}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {latest ? (
           <>

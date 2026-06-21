@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
-import { CalendarDays, CheckCircle2, ClipboardList, Pencil, Plus, Target, Users, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ClipboardList, ListChecks, Pencil, Plus, Target, Users, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
@@ -17,12 +17,28 @@ const statusMap = {
   perlu_revisi: { label: 'Perlu direvisi', style: 'bg-error-container/60 text-error' },
 }
 
+const emptyGoalForm = {
+  area: '',
+  tujuan: '',
+  indikator: '',
+  target: 80,
+  aktivitas: '',
+  media_alat: '',
+  pelaksana: 'Guru kelas',
+  frekuensi: '',
+  metode_evaluasi: 'Observasi kinerja',
+  langkah_tugas: ['', ''],
+  catatan_evaluasi: '',
+  tindak_lanjut: 'lanjutkan',
+}
+
 export default function PpiPage({ params }: { params: { id: string } }) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [studentName, setStudentName] = useState('')
   const [goals, setGoals] = useState<PpiGoal[]>([])
   const [strategies, setStrategies] = useState<string[]>([])
+  const [longTermGoal, setLongTermGoal] = useState('')
   const [period, setPeriod] = useState('')
   const [daysUntilEvaluation, setDaysUntilEvaluation] = useState<number | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
@@ -31,28 +47,25 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [goalModalOpen, setGoalModalOpen] = useState(false)
   const [savingGoal, setSavingGoal] = useState(false)
   const [goalError, setGoalError] = useState('')
-  const [goalForm, setGoalForm] = useState({
-    area: '',
-    tujuan: '',
-    indikator: '',
-    target: 80,
-  })
+  const [editingGoal, setEditingGoal] = useState<PpiGoal | null>(null)
+  const [goalForm, setGoalForm] = useState(emptyGoalForm)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
     if (user) {
       supabase.from('siswa').select('nama').eq('id', params.id).single().then(({ data }) => setStudentName(data?.nama || ''))
-      supabase.from('ppi').select('id, periode_mulai, periode_selesai, strategi').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle().then(async ({ data }) => {
+      supabase.from('ppi').select('id, periode_mulai, periode_selesai, strategi, tujuan_jangka_panjang').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle().then(async ({ data }) => {
         if (!data) {
           setDataLoading(false)
           return
         }
         setHasPpi(true)
         setPpiId(data.id)
+        setLongTermGoal(data.tujuan_jangka_panjang || '')
         setStrategies(Array.isArray(data.strategi) ? data.strategi as string[] : [])
         setPeriod(`${data.periode_mulai} – ${data.periode_selesai}`)
         setDaysUntilEvaluation(Math.max(0, Math.ceil((new Date(data.periode_selesai).getTime() - Date.now()) / 86400000)))
-        const { data: goalRows } = await supabase.from('tujuan_ppi').select('id, area, tujuan, indikator, target, capaian, status').eq('ppi_id', data.id).order('created_at')
+        const { data: goalRows } = await supabase.from('tujuan_ppi').select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas').eq('ppi_id', data.id).order('created_at')
         setGoals((goalRows || []) as PpiGoal[])
         setDataLoading(false)
       })
@@ -62,7 +75,34 @@ export default function PpiPage({ params }: { params: { id: string } }) {
 
   const displayName = studentName || 'Siswa'
 
-  async function handleAddGoal(event: React.FormEvent<HTMLFormElement>) {
+  function openNewGoal() {
+    setEditingGoal(null)
+    setGoalForm(emptyGoalForm)
+    setGoalError('')
+    setGoalModalOpen(true)
+  }
+
+  function openEditGoal(goal: PpiGoal) {
+    setEditingGoal(goal)
+    setGoalForm({
+      area: goal.area,
+      tujuan: goal.tujuan,
+      indikator: goal.indikator,
+      target: goal.target,
+      aktivitas: goal.aktivitas || '',
+      media_alat: goal.media_alat || '',
+      pelaksana: goal.pelaksana || 'Guru kelas',
+      frekuensi: goal.frekuensi || '',
+      metode_evaluasi: goal.metode_evaluasi || 'Observasi kinerja',
+      langkah_tugas: Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? goal.langkah_tugas : ['', ''],
+      catatan_evaluasi: '',
+      tindak_lanjut: goal.status === 'tercapai' ? 'tercapai' : 'lanjutkan',
+    })
+    setGoalError('')
+    setGoalModalOpen(true)
+  }
+
+  async function handleSaveGoal(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setGoalError('')
 
@@ -74,34 +114,75 @@ export default function PpiPage({ params }: { params: { id: string } }) {
     const area = goalForm.area.trim()
     const tujuan = goalForm.tujuan.trim()
     const indikator = goalForm.indikator.trim()
-    if (!area || !tujuan || !indikator) {
-      setGoalError('Area, tujuan, dan indikator wajib diisi.')
+    const taskSteps = goalForm.langkah_tugas.map((item) => item.trim()).filter(Boolean)
+    if (!area || !tujuan || !indikator || !goalForm.aktivitas.trim() || !goalForm.metode_evaluasi.trim() || taskSteps.length === 0) {
+      setGoalError('Area, tujuan, indikator, aktivitas, metode evaluasi, dan minimal satu langkah tugas wajib diisi.')
       return
     }
 
     setSavingGoal(true)
-    const { data, error } = await supabase
-      .from('tujuan_ppi')
-      .insert({
-        ppi_id: ppiId,
-        area,
-        tujuan,
-        indikator,
-        target: goalForm.target,
-        capaian: 0,
-        status: 'belum_dimulai',
-      })
-      .select('id, area, tujuan, indikator, target, capaian, status')
+    const payload = {
+      area,
+      tujuan,
+      indikator,
+      target: goalForm.target,
+      aktivitas: goalForm.aktivitas.trim(),
+      media_alat: goalForm.media_alat.trim() || null,
+      pelaksana: goalForm.pelaksana.trim() || 'Guru kelas',
+      frekuensi: goalForm.frekuensi.trim() || null,
+      metode_evaluasi: goalForm.metode_evaluasi.trim(),
+      langkah_tugas: taskSteps,
+      updated_at: new Date().toISOString(),
+    }
+    const query = editingGoal
+      ? supabase.from('tujuan_ppi').update({
+          ...payload,
+          status: goalForm.tindak_lanjut === 'revisi'
+            ? 'perlu_revisi'
+            : goalForm.tindak_lanjut === 'hentikan'
+              ? 'perlu_revisi'
+            : goalForm.tindak_lanjut === 'tercapai'
+              ? 'tercapai'
+              : editingGoal.status,
+        }).eq('id', editingGoal.id)
+      : supabase.from('tujuan_ppi').insert({
+          ppi_id: ppiId,
+          ...payload,
+          capaian: 0,
+          status: 'belum_dimulai',
+        })
+    const { data, error } = await query
+      .select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas')
       .single()
 
-    setSavingGoal(false)
     if (error || !data) {
+      setSavingGoal(false)
       setGoalError(error?.message || 'Tujuan belum berhasil disimpan.')
       return
     }
 
-    setGoals((current) => [...current, data as PpiGoal])
-    setGoalForm({ area: '', tujuan: '', indikator: '', target: 80 })
+    if (editingGoal && user) {
+      const note = goalForm.catatan_evaluasi.trim() || 'Tujuan ditinjau dan diperbarui oleh guru.'
+      const { error: evaluationError } = await supabase.from('evaluasi_tujuan_ppi').insert({
+        tujuan_ppi_id: editingGoal.id,
+        capaian_sebelum: editingGoal.capaian,
+        status_sebelum: editingGoal.status,
+        catatan: note,
+        tindak_lanjut: goalForm.tindak_lanjut,
+        dibuat_oleh: user.id,
+      })
+      if (evaluationError) {
+        setSavingGoal(false)
+        setGoalError(`Tujuan tersimpan, tetapi riwayat evaluasi gagal: ${evaluationError.message}`)
+        return
+      }
+      setGoals((current) => current.map((item) => item.id === editingGoal.id ? data as PpiGoal : item))
+    } else {
+      setGoals((current) => [...current, data as PpiGoal])
+    }
+    setSavingGoal(false)
+    setGoalForm(emptyGoalForm)
+    setEditingGoal(null)
     setGoalModalOpen(false)
   }
 
@@ -125,7 +206,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               <h1 className="font-display text-[34px] md:text-display-lg">{displayName}</h1>
               <p className="text-white/75 mt-2">{period || 'Belum ada periode PPI'}</p>
             </div>
-            <button className="w-full md:w-auto px-5 py-3 rounded-full bg-white text-primary font-bold inline-flex items-center justify-center gap-2"><Pencil className="w-4 h-4" /> Edit rancangan PPI</button>
+            <button type="button" onClick={openNewGoal} disabled={!hasPpi} className="w-full md:w-auto px-5 py-3 rounded-full bg-white text-primary font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50"><Plus className="w-4 h-4" /> Tambah tujuan</button>
           </div>
         </section>
 
@@ -141,6 +222,13 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             </div>
           ))}
         </div>
+
+        {longTermGoal && (
+          <section className="mb-md rounded-3xl border border-primary/15 bg-primary/5 p-5 sm:p-md">
+            <div className="text-xs font-bold text-primary">TUJUAN JANGKA PANJANG</div>
+            <p className="mt-2 text-lg font-bold leading-relaxed text-on-surface">{longTermGoal}</p>
+          </section>
+        )}
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-md items-start">
           <section className="space-y-4">
@@ -169,19 +257,37 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                     <div className="text-xs font-bold text-on-surface-variant mb-1">INDIKATOR KEBERHASILAN</div>
                     <p className="text-sm">{goal.indikator}</p>
                   </div>
+                  <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-2xl border border-outline-variant/20 p-4">
+                      <div className="text-xs font-bold text-on-surface-variant">AKTIVITAS</div>
+                      <p className="mt-1">{goal.aktivitas || 'Belum ditentukan.'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-outline-variant/20 p-4">
+                      <div className="text-xs font-bold text-on-surface-variant">MEDIA DAN PELAKSANA</div>
+                      <p className="mt-1">{goal.media_alat || 'Media belum ditentukan.'}</p>
+                      <p className="mt-1 text-on-surface-variant">{goal.pelaksana || 'Guru kelas'}{goal.frekuensi ? ` · ${goal.frekuensi}` : ''}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 rounded-2xl bg-primary/5 p-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-primary"><ListChecks className="w-4 h-4" /> ANALISIS TUGAS</div>
+                    <ol className="mt-2 space-y-1 text-sm list-decimal pl-5">
+                      {(Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? goal.langkah_tugas : [goal.indikator]).map((step) => <li key={step}>{step}</li>)}
+                    </ol>
+                    <p className="mt-2 text-xs text-on-surface-variant">Evaluasi: {goal.metode_evaluasi || 'Observasi kinerja'}</p>
+                  </div>
                   <div className="mt-4">
                     <div className="flex justify-between text-sm font-bold mb-2"><span>Capaian saat ini</span><span>{goal.capaian}% dari target {goal.target}%</span></div>
                     <div className="h-3 bg-surface-container-high rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((goal.capaian / goal.target) * 100, 100)}%` }} /></div>
                   </div>
+                  <button type="button" onClick={() => openEditGoal(goal)} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-primary">
+                    <Pencil className="w-4 h-4" /> Evaluasi atau revisi tujuan
+                  </button>
                 </article>
               )
             })}
             <button
               type="button"
-              onClick={() => {
-                setGoalError('')
-                setGoalModalOpen(true)
-              }}
+              onClick={openNewGoal}
               disabled={!hasPpi}
               className="w-full py-4 rounded-full border-2 border-dashed border-primary/30 text-primary font-bold inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -215,11 +321,11 @@ export default function PpiPage({ params }: { params: { id: string } }) {
 
       {goalModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/35 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="add-goal-title">
-          <form onSubmit={handleAddGoal} className="w-full max-w-xl max-h-full overflow-y-auto rounded-3xl bg-white p-5 sm:p-6 shadow-2xl">
+          <form onSubmit={handleSaveGoal} className="w-full max-w-2xl max-h-full overflow-y-auto rounded-3xl bg-white p-5 sm:p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <span className="text-xs font-bold text-primary">TUJUAN PPI</span>
-                <h2 id="add-goal-title" className="mt-1 text-xl font-bold text-on-surface">Tambah tujuan jangka pendek</h2>
+                <h2 id="add-goal-title" className="mt-1 text-xl font-bold text-on-surface">{editingGoal ? 'Evaluasi dan revisi tujuan' : 'Tambah tujuan jangka pendek'}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">Buat tujuan yang spesifik, dapat diamati, dan dapat diukur melalui observasi.</p>
               </div>
               <button type="button" onClick={() => setGoalModalOpen(false)} disabled={savingGoal} className="shrink-0 p-2 rounded-full hover:bg-surface-container disabled:opacity-40" aria-label="Tutup">
@@ -237,6 +343,60 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                   className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary"
                 />
               </label>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="block">
+                  <span className="text-sm font-bold text-on-surface">Aktivitas pembelajaran</span>
+                  <textarea value={goalForm.aktivitas} onChange={(event) => setGoalForm((current) => ({ ...current, aktivitas: event.target.value }))} rows={3} placeholder="Kegiatan yang dilakukan untuk mencapai tujuan" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-bold text-on-surface">Media atau alat bantu</span>
+                  <textarea value={goalForm.media_alat} onChange={(event) => setGoalForm((current) => ({ ...current, media_alat: event.target.value }))} rows={3} placeholder="Contoh: kartu huruf timbul, timer visual" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-bold text-on-surface">Pelaksana</span>
+                  <input value={goalForm.pelaksana} onChange={(event) => setGoalForm((current) => ({ ...current, pelaksana: event.target.value }))} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-bold text-on-surface">Frekuensi atau durasi</span>
+                  <input value={goalForm.frekuensi} onChange={(event) => setGoalForm((current) => ({ ...current, frekuensi: event.target.value }))} placeholder="Contoh: 3 kali seminggu, 15 menit" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-sm font-bold text-on-surface">Metode evaluasi</span>
+                <input value={goalForm.metode_evaluasi} onChange={(event) => setGoalForm((current) => ({ ...current, metode_evaluasi: event.target.value }))} placeholder="Contoh: tes kinerja dan observasi langsung" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+              </label>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-bold text-on-surface">Langkah analisis tugas</span>
+                  <button type="button" onClick={() => setGoalForm((current) => ({ ...current, langkah_tugas: [...current.langkah_tugas, ''] }))} className="text-xs font-bold text-primary">+ Tambah langkah</button>
+                </div>
+                <div className="mt-2 space-y-2">
+                  {goalForm.langkah_tugas.map((task, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <span className="w-7 text-center text-sm font-bold text-primary">{index + 1}</span>
+                      <input value={task} onChange={(event) => setGoalForm((current) => ({ ...current, langkah_tugas: current.langkah_tugas.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} placeholder="Langkah kecil yang dapat diamati" className="min-w-0 flex-1 rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                      {goalForm.langkah_tugas.length > 1 && <button type="button" onClick={() => setGoalForm((current) => ({ ...current, langkah_tugas: current.langkah_tugas.filter((_, itemIndex) => itemIndex !== index) }))} className="p-2 text-error" aria-label="Hapus langkah"><X className="w-4 h-4" /></button>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {editingGoal && (
+                <div className="rounded-2xl bg-tertiary-fixed/25 p-4 space-y-3">
+                  <label className="block">
+                    <span className="text-sm font-bold text-on-surface">Catatan hasil evaluasi</span>
+                    <textarea value={goalForm.catatan_evaluasi} onChange={(event) => setGoalForm((current) => ({ ...current, catatan_evaluasi: event.target.value }))} rows={2} placeholder="Perubahan yang terlihat dan alasan revisi" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-white px-4 py-3 outline-none focus:border-primary" />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-bold text-on-surface">Tindak lanjut</span>
+                    <select value={goalForm.tindak_lanjut} onChange={(event) => setGoalForm((current) => ({ ...current, tindak_lanjut: event.target.value }))} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-white px-4 py-3 outline-none focus:border-primary">
+                      <option value="lanjutkan">Lanjutkan program</option>
+                      <option value="revisi">Revisi dan pantau kembali</option>
+                      <option value="tercapai">Tujuan tercapai</option>
+                      <option value="hentikan">Hentikan tujuan</option>
+                    </select>
+                  </label>
+                </div>
+              )}
               <label className="block">
                 <span className="text-sm font-bold text-on-surface">Tujuan jangka pendek</span>
                 <textarea
@@ -279,7 +439,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setGoalModalOpen(false)} disabled={savingGoal} className="py-3 rounded-full bg-surface-container-high font-bold disabled:opacity-40">Batal</button>
               <button type="submit" disabled={savingGoal} className="py-3 rounded-full bg-primary text-white font-bold disabled:opacity-60">
-                {savingGoal ? <LoadingSpinner label="Menyimpan..." /> : 'Simpan tujuan'}
+                {savingGoal ? <LoadingSpinner label="Menyimpan..." /> : editingGoal ? 'Simpan evaluasi' : 'Simpan tujuan'}
               </button>
             </div>
           </form>

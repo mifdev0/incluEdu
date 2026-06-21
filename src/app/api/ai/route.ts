@@ -33,13 +33,25 @@ Kembalikan JSON dengan kategori, keyakinan, alasan singkat, 2-4 pertanyaan_lanju
     if (body.action === 'ppi') {
       const result = await deepseekJson<{
         tujuan_jangka_panjang: string
-        tujuan_jangka_pendek: Array<{ area: string; tujuan: string; indikator: string; target: number }>
+        tujuan_jangka_pendek: Array<{
+          area: string
+          tujuan: string
+          indikator: string
+          target: number
+          aktivitas: string
+          media_alat: string
+          pelaksana: string
+          frekuensi: string
+          metode_evaluasi: string
+          langkah_tugas: string[]
+        }>
         strategi: string[]
       }>(
-        'Kamu membantu guru menyusun draf Program Pembelajaran Individual. Tujuan harus spesifik, terukur, realistis, dan berdasarkan kemampuan awal. Hasil selalu perlu ditinjau guru.',
+        'Kamu membantu guru menyusun draf Program Pembelajaran Individual sesuai prinsip PPI Kemendikbudristek 2021. Tujuan harus individual, spesifik, terukur, realistis, berdasarkan kekuatan dan kemampuan awal. AI hanya menyusun draf yang wajib ditinjau guru.',
         `Profil siswa: ${JSON.stringify(body.student)}
 Asesmen awal: ${JSON.stringify(body.baseline)}
-Susun satu tujuan jangka panjang, 2-4 tujuan jangka pendek, indikator terukur, target 0-100, dan strategi pembelajaran.`
+Susun satu tujuan jangka panjang, 2-4 tujuan jangka pendek, dan strategi pembelajaran.
+Setiap tujuan jangka pendek wajib memuat: area, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati.`
       )
       const goals = (Array.isArray(result.tujuan_jangka_pendek) ? result.tujuan_jangka_pendek : [])
         .map((goal) => ({
@@ -47,6 +59,12 @@ Susun satu tujuan jangka panjang, 2-4 tujuan jangka pendek, indikator terukur, t
           tujuan: String(goal.tujuan || ''),
           indikator: String(goal.indikator || 'Dievaluasi melalui observasi berkala'),
           target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
+          aktivitas: String(goal.aktivitas || ''),
+          media_alat: String(goal.media_alat || ''),
+          pelaksana: String(goal.pelaksana || 'Guru kelas'),
+          frekuensi: String(goal.frekuensi || 'Disesuaikan jadwal pembelajaran'),
+          metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
+          langkah_tugas: Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas.map(String).filter(Boolean).slice(0, 6) : [],
         }))
         .filter((goal) => goal.tujuan.length > 0)
       return NextResponse.json({

@@ -23,9 +23,25 @@ const categories = [
 
 const baselineAreas = [
   { key: 'belajar', label: 'Fungsi belajar' },
+  { key: 'membaca', label: 'Kemampuan membaca' },
+  { key: 'menulis', label: 'Kemampuan menulis' },
+  { key: 'matematika', label: 'Kemampuan matematika' },
   { key: 'komunikasi', label: 'Komunikasi' },
   { key: 'sosial', label: 'Sosial dan emosi' },
   { key: 'motorik', label: 'Sensorik dan motorik' },
+  { key: 'konsentrasi', label: 'Konsentrasi dan respons instruksi' },
+  { key: 'kemandirian', label: 'Kemandirian dan bina diri' },
+]
+
+const accommodationOptions = [
+  'Instruksi singkat dan bertahap',
+  'Waktu pengerjaan tambahan',
+  'Posisi duduk minim distraksi',
+  'Materi berukuran besar / kontras tinggi',
+  'Braille atau media taktil',
+  'Alat bantu dengar / dukungan visual',
+  'Jeda belajar dan ruang tenang',
+  'Jawaban lisan sebagai alternatif tulisan',
 ]
 
 export default function TambahSiswaPage() {
@@ -38,6 +54,11 @@ export default function TambahSiswaPage() {
   const [identificationMode, setIdentificationMode] = useState<'known' | 'unsure'>('known')
   const [kategori, setKategori] = useState('')
   const [description, setDescription] = useState('')
+  const [strengths, setStrengths] = useState('')
+  const [developmentHistory, setDevelopmentHistory] = useState('')
+  const [previousServices, setPreviousServices] = useState('')
+  const [referralSource, setReferralSource] = useState('')
+  const [accommodations, setAccommodations] = useState<string[]>([])
   const [suggestion, setSuggestion] = useState<{ kategori: string; keyakinan: string; alasan: string; pertanyaan_lanjutan: string[]; strategi_awal: string[] } | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -87,6 +108,11 @@ export default function TambahSiswaPage() {
         kategori,
         deskripsi_kebutuhan: description.trim() || null,
         sumber_identifikasi: identificationMode === 'unsure' ? 'ai_dikonfirmasi' : 'guru',
+        kekuatan_minat: strengths.trim() || null,
+        riwayat_perkembangan: developmentHistory.trim() || null,
+        layanan_sebelumnya: previousServices.trim() || null,
+        sumber_rujukan: referralSource.trim() || null,
+        akomodasi: accommodations,
       }).select('id').single()
       if (studentError) throw new Error(formatSaveError(studentError, 'Menyimpan profil siswa'))
       createdStudentId = student.id
@@ -97,6 +123,17 @@ export default function TambahSiswaPage() {
         komunikasi: baseline.komunikasi,
         sosial_emosi: baseline.sosial,
         sensorik_motorik: baseline.motorik,
+        membaca: baseline.membaca,
+        menulis: baseline.menulis,
+        matematika: baseline.matematika,
+        konsentrasi: baseline.konsentrasi,
+        kemandirian: baseline.kemandirian,
+        catatan: {
+          kekuatan_minat: strengths.trim(),
+          riwayat_perkembangan: developmentHistory.trim(),
+          layanan_sebelumnya: previousServices.trim(),
+          akomodasi: accommodations,
+        },
       })
       if (baselineError) throw new Error(formatSaveError(baselineError, 'Menyimpan asesmen awal'))
 
@@ -105,7 +142,15 @@ export default function TambahSiswaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'ppi',
-          student: { nama, kategori, deskripsi: description },
+          student: {
+            nama,
+            kategori,
+            deskripsi: description,
+            kekuatan_minat: strengths,
+            riwayat_perkembangan: developmentHistory,
+            layanan_sebelumnya: previousServices,
+            akomodasi: accommodations,
+          },
           baseline,
         }),
       })
@@ -135,6 +180,12 @@ export default function TambahSiswaPage() {
           target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
           capaian: 0,
           status: 'belum_dimulai',
+          aktivitas: String(goal.aktivitas || ''),
+          media_alat: String(goal.media_alat || ''),
+          pelaksana: String(goal.pelaksana || 'Guru kelas'),
+          frekuensi: String(goal.frekuensi || ''),
+          metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
+          langkah_tugas: Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas.map(String).filter(Boolean) : [],
         }))
         .filter((goal: { tujuan: string }) => goal.tujuan.trim().length > 0)
       if (goals.length === 0) throw new Error('AI tidak menghasilkan tujuan PPI yang dapat disimpan.')
@@ -272,6 +323,45 @@ export default function TambahSiswaPage() {
                 <p className="text-xs text-on-surface-variant">AI hanya menyarankan kebutuhan pembelajaran dan tidak memberikan diagnosis medis. Guru tetap menentukan hasil akhir.</p>
               </div>
             )}
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="block font-label-md text-on-surface-variant mb-2">Kekuatan dan minat siswa</span>
+                <textarea value={strengths} onChange={(event) => setStrengths(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Contoh: menyukai musik, kuat dalam komunikasi lisan..." />
+              </label>
+              <label className="block">
+                <span className="block font-label-md text-on-surface-variant mb-2">Riwayat perkembangan singkat</span>
+                <textarea value={developmentHistory} onChange={(event) => setDevelopmentHistory(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Kemampuan, hambatan, atau perubahan yang pernah diamati..." />
+              </label>
+              <label className="block">
+                <span className="block font-label-md text-on-surface-variant mb-2">Layanan yang pernah diterima</span>
+                <textarea value={previousServices} onChange={(event) => setPreviousServices(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Contoh: terapi wicara, pendampingan GPK, belum ada..." />
+              </label>
+              <label className="block">
+                <span className="block font-label-md text-on-surface-variant mb-2">Sumber rujukan atau identifikasi</span>
+                <textarea value={referralSource} onChange={(event) => setReferralSource(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Contoh: pengamatan guru, orang tua, psikolog..." />
+              </label>
+            </div>
+
+            <div>
+              <div className="font-label-md text-on-surface-variant mb-2">Akomodasi yang dibutuhkan</div>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {accommodationOptions.map((option) => {
+                  const selected = accommodations.includes(option)
+                  return (
+                    <label key={option} className={`flex items-start gap-3 rounded-2xl border p-3 cursor-pointer ${selected ? 'border-primary bg-primary/5' : 'border-outline-variant/30'}`}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => setAccommodations((current) => selected ? current.filter((item) => item !== option) : [...current, option])}
+                        className="mt-0.5 accent-primary"
+                      />
+                      <span className="text-sm font-medium">{option}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
 
             {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">{error}</div>}
             <button type="button" disabled={!canContinueProfile || kelasList.length === 0} onClick={() => setStep(2)} className="w-full py-4 rounded-full bg-primary text-white font-bold disabled:opacity-40 inline-flex items-center justify-center gap-2">
