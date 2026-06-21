@@ -19,7 +19,8 @@ export interface DimensiItem {
   key: string
   label: string
   pertanyaan: string
-  opsi: Array<{ value: string; label: string; bobot: number }>
+  context?: string
+  opsi: Array<{ value: string; label: string; bobot: number; description?: string; code?: string }>
 }
 
 export const DIMENSI_UNIVERSAL: DimensiItem[] = [

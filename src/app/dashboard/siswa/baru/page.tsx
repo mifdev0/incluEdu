@@ -7,6 +7,7 @@ import { BrandLogo } from '@/components/brand-logo'
 import { ArrowRight, Brain, Check, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { FullPageLoading } from '@/components/loading-state'
+import { ACCOMMODATION_GROUPS, ACCOMMODATION_OPTIONS, recommendedAccommodations } from '@/lib/accommodation-data'
 
 const categories = [
   { value: 'slow_learner', label: 'Slow Learner' },
@@ -33,17 +34,6 @@ const baselineAreas = [
   { key: 'kemandirian', label: 'Kemandirian dan bina diri' },
 ]
 
-const accommodationOptions = [
-  'Instruksi singkat dan bertahap',
-  'Waktu pengerjaan tambahan',
-  'Posisi duduk minim distraksi',
-  'Materi berukuran besar / kontras tinggi',
-  'Braille atau media taktil',
-  'Alat bantu dengar / dukungan visual',
-  'Jeda belajar dan ruang tenang',
-  'Jawaban lisan sebagai alternatif tulisan',
-]
-
 export default function TambahSiswaPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -59,6 +49,7 @@ export default function TambahSiswaPage() {
   const [previousServices, setPreviousServices] = useState('')
   const [referralSource, setReferralSource] = useState('')
   const [accommodations, setAccommodations] = useState<string[]>([])
+  const [customAccommodation, setCustomAccommodation] = useState('')
   const [suggestion, setSuggestion] = useState<{ kategori: string; keyakinan: string; alasan: string; pertanyaan_lanjutan: string[]; strategi_awal: string[] } | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -74,6 +65,10 @@ export default function TambahSiswaPage() {
     }
   }, [user, loading, router])
   if (loading || !user) return <FullPageLoading label="Menyiapkan formulir siswa..." />
+  const recommended = recommendedAccommodations(kategori)
+  const finalAccommodations = Array.from(new Set(customAccommodation.trim()
+    ? [...accommodations, customAccommodation.trim()]
+    : accommodations))
 
   async function analyze() {
     if (!description.trim()) return
@@ -112,7 +107,7 @@ export default function TambahSiswaPage() {
         riwayat_perkembangan: developmentHistory.trim() || null,
         layanan_sebelumnya: previousServices.trim() || null,
         sumber_rujukan: referralSource.trim() || null,
-        akomodasi: accommodations,
+        akomodasi: finalAccommodations,
       }).select('id').single()
       if (studentError) throw new Error(formatSaveError(studentError, 'Menyimpan profil siswa'))
       createdStudentId = student.id
@@ -132,7 +127,7 @@ export default function TambahSiswaPage() {
           kekuatan_minat: strengths.trim(),
           riwayat_perkembangan: developmentHistory.trim(),
           layanan_sebelumnya: previousServices.trim(),
-          akomodasi: accommodations,
+          akomodasi: finalAccommodations,
         },
       })
       if (baselineError) throw new Error(formatSaveError(baselineError, 'Menyimpan asesmen awal'))
@@ -149,7 +144,7 @@ export default function TambahSiswaPage() {
             kekuatan_minat: strengths,
             riwayat_perkembangan: developmentHistory,
             layanan_sebelumnya: previousServices,
-            akomodasi: accommodations,
+            akomodasi: finalAccommodations,
           },
           baseline,
         }),
@@ -346,23 +341,87 @@ export default function TambahSiswaPage() {
             </div>
 
             <div>
-              <div className="font-label-md text-on-surface-variant mb-2">Akomodasi yang dibutuhkan</div>
-              <div className="grid sm:grid-cols-2 gap-2">
-                {accommodationOptions.map((option) => {
-                  const selected = accommodations.includes(option)
-                  return (
-                    <label key={option} className={`flex items-start gap-3 rounded-2xl border p-3 cursor-pointer ${selected ? 'border-primary bg-primary/5' : 'border-outline-variant/30'}`}>
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => setAccommodations((current) => selected ? current.filter((item) => item !== option) : [...current, option])}
-                        className="mt-0.5 accent-primary"
-                      />
-                      <span className="text-sm font-medium">{option}</span>
-                    </label>
-                  )
-                })}
+              <div className="rounded-3xl border border-primary/15 bg-primary/5 p-4 sm:p-5">
+                <div className="font-bold text-on-surface">Dukungan apa yang mungkin membantu siswa?</div>
+                <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
+                  Pilih berdasarkan hambatan yang terlihat, bukan berdasarkan diagnosis. Tidak perlu memilih semua dan pilihan dapat diubah setelah dicoba.
+                </p>
               </div>
+
+              <div className="mt-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-bold text-on-surface">Saran awal</div>
+                    <div className="text-xs text-on-surface-variant">Berdasarkan kebutuhan yang dipilih</div>
+                  </div>
+                  <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">{accommodations.length} dipilih</span>
+                </div>
+                <div className="mt-3 grid sm:grid-cols-2 gap-2">
+                  {recommended.map((option) => {
+                    const selected = accommodations.includes(option.value)
+                    return (
+                      <label key={option.value} className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition-colors ${selected ? 'border-primary bg-white' : 'border-outline-variant/30 bg-surface-container-low'}`}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => setAccommodations((current) => selected ? current.filter((item) => item !== option.value) : [...current, option.value])}
+                          className="mt-1 shrink-0 accent-primary"
+                        />
+                        <span>
+                          <span className="block text-sm font-bold text-on-surface">{option.value}</span>
+                          <span className="mt-1 block text-xs leading-relaxed text-on-surface-variant">{option.when}</span>
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <details className="mt-4 rounded-3xl border border-outline-variant/25 bg-white p-4">
+                <summary className="cursor-pointer font-bold text-primary">Lihat pilihan dukungan lainnya</summary>
+                <div className="mt-4 space-y-4">
+                  {ACCOMMODATION_GROUPS.map((group) => (
+                    <div key={group}>
+                      <div className="mb-2 text-xs font-bold uppercase tracking-wide text-on-surface-variant">{group}</div>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {ACCOMMODATION_OPTIONS.filter((option) => option.group === group && !recommended.some((item) => item.value === option.value)).map((option) => {
+                          const selected = accommodations.includes(option.value)
+                          return (
+                            <label key={option.value} className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 ${selected ? 'border-primary bg-primary/5' : 'border-outline-variant/25'}`}>
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => setAccommodations((current) => selected ? current.filter((item) => item !== option.value) : [...current, option.value])}
+                                className="mt-1 shrink-0 accent-primary"
+                              />
+                              <span>
+                                <span className="block text-sm font-bold">{option.value}</span>
+                                <span className="mt-1 block text-xs leading-relaxed text-on-surface-variant">{option.when}</span>
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+
+              <label className="mt-4 block">
+                <span className="text-sm font-bold text-on-surface">Dukungan lain yang sudah terbukti membantu (opsional)</span>
+                <input value={customAccommodation} onChange={(event) => setCustomAccommodation(event.target.value)} placeholder="Contoh: duduk bersama pendamping saat transisi kelas" className="mt-2 w-full rounded-2xl border border-outline-variant/30 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+              </label>
+
+              {finalAccommodations.length > 0 && (
+                <div className="mt-4 rounded-2xl bg-[#E4F8EE] p-4">
+                  <div className="text-xs font-bold text-secondary">DUKUNGAN YANG AKAN DISIMPAN</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {finalAccommodations.map((option) => (
+                      <span key={option} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold">{option}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">{error}</div>}

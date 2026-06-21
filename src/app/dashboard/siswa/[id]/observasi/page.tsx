@@ -27,12 +27,12 @@ const legacyGoalScore: Record<string, number> = {
 }
 
 const assistanceOptions = [
-  { value: 'bf', label: 'Bf — Bantuan fisik penuh', bobot: 20 },
-  { value: 'bv', label: 'Bv — Bantuan verbal', bobot: 40 },
-  { value: 'd', label: 'D — Demonstrasi / contoh langsung', bobot: 55 },
-  { value: 'p', label: 'P — Petunjuk atau gesture minimal', bobot: 75 },
-  { value: 'inkonsisten', label: '+/- — Mampu tetapi belum konsisten', bobot: 85 },
-  { value: 'mandiri', label: '+ — Mandiri, aman, dan konsisten', bobot: 100 },
+  { value: 'bf', code: 'Bf', label: 'Perlu dibantu secara fisik', description: 'Guru membimbing gerakan atau tangan siswa secara langsung.', bobot: 20 },
+  { value: 'bv', code: 'Bv', label: 'Perlu arahan lisan', description: 'Guru menyebutkan apa yang harus dilakukan langkah demi langkah.', bobot: 40 },
+  { value: 'd', code: 'D', label: 'Perlu diberi contoh', description: 'Guru memperagakan terlebih dahulu, kemudian siswa meniru.', bobot: 55 },
+  { value: 'p', code: 'P', label: 'Cukup diberi petunjuk kecil', description: 'Siswa hanya membutuhkan isyarat, tunjukan, atau pengingat singkat.', bobot: 75 },
+  { value: 'inkonsisten', code: '+/−', label: 'Sudah bisa, tetapi belum konsisten', description: 'Kadang mandiri, tetapi pada kesempatan lain masih memerlukan petunjuk.', bobot: 85 },
+  { value: 'mandiri', code: '+', label: 'Sudah mandiri dan konsisten', description: 'Siswa menyelesaikan langkah dengan aman tanpa bantuan.', bobot: 100 },
 ]
 
 const assistanceScore = Object.fromEntries(assistanceOptions.map((option) => [option.value, option.bobot]))
@@ -57,9 +57,8 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
     return taskSteps.map((task, index) => ({
       key: `task_${goal.id}_${index}`,
       label: `${hasTaskAnalysis ? 'Analisis tugas' : 'Tujuan PPI'} · ${goal.area}`,
-      pertanyaan: hasTaskAnalysis
-        ? `${task} Tingkat bantuan apa yang dibutuhkan ${studentName} pada langkah ini?`
-        : `Saat menjalankan tujuan “${task}”, tingkat bantuan apa yang dibutuhkan ${studentName}?`,
+      context: task,
+      pertanyaan: `Bantuan apa yang masih dibutuhkan ${studentName}?`,
       opsi: assistanceOptions,
     }))
   })
@@ -108,6 +107,7 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
   if (authLoading || !user || dataLoading) return <FullPageLoading label="Menyiapkan observasi..." />
 
   const pertanyaanSaatIni = semuaDimensi[step]
+  const isTaskQuestion = pertanyaanSaatIni?.key.startsWith('task_')
   const total = semuaDimensi.length
   const terjawab = semuaDimensi.filter((dimension) => Boolean(jawaban[dimension.key])).length
   const pct = Math.round((terjawab / total) * 100)
@@ -190,17 +190,30 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
               <Scale className="w-3.5 h-3.5" /> Lihat rubrik
             </button>
           </div>
-          <p className="font-headline-sm text-headline-sm text-on-surface mb-md">{pertanyaanSaatIni.pertanyaan}</p>
+          {isTaskQuestion && (
+            <div className="mb-4 rounded-2xl bg-primary/5 px-4 py-3">
+              <div className="text-xs font-bold text-primary">LANGKAH YANG DIAMATI</div>
+              <p className="mt-1 text-sm font-semibold leading-relaxed text-on-surface">{pertanyaanSaatIni.context}</p>
+              <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">Nilai satu langkah ini saja berdasarkan kondisi yang benar-benar terlihat.</p>
+            </div>
+          )}
+          <p className="text-lg sm:text-xl font-bold leading-relaxed text-on-surface mb-md">{pertanyaanSaatIni.pertanyaan}</p>
           <div className="space-y-3">
             {pertanyaanSaatIni.opsi.map((o) => (
               <button key={o.value} type="button" onClick={() => pilih(pertanyaanSaatIni.key, o.value)}
-                className={`w-full text-left px-4 sm:px-5 py-3.5 rounded-2xl sm:rounded-full text-sm sm:text-body-md font-semibold transition-all ${
+                className={`w-full text-left px-4 sm:px-5 py-3.5 rounded-2xl text-sm sm:text-body-md font-semibold transition-all ${
                   jawaban[pertanyaanSaatIni.key] === o.value
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'bg-surface-container-low text-on-surface hover:bg-surface-container border border-outline-variant/30'
                 }`}
               >
-                {o.label}
+                <span className="flex items-start gap-3">
+                  {o.code && <span className={`mt-0.5 inline-flex min-w-9 justify-center rounded-lg px-2 py-1 text-xs font-bold ${jawaban[pertanyaanSaatIni.key] === o.value ? 'bg-white/15' : 'bg-white text-primary'}`}>{o.code}</span>}
+                  <span>
+                    <span className="block">{o.label}</span>
+                    {o.description && <span className={`mt-1 block text-xs font-normal leading-relaxed ${jawaban[pertanyaanSaatIni.key] === o.value ? 'text-white/75' : 'text-on-surface-variant'}`}>{o.description}</span>}
+                  </span>
+                </span>
               </button>
             ))}
           </div>
@@ -312,12 +325,15 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
               </button>
             </div>
             <p className="text-sm text-on-surface-variant mt-2">
-              Bobot digunakan sistem untuk menghitung perkembangan. Pilih jawaban berdasarkan kondisi yang benar-benar diamati.
+              Pilih tingkat bantuan paling rendah yang membuat siswa berhasil. Kode tetap dicatat sesuai format evaluasi PPI.
             </p>
             <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant/20">
               {pertanyaanSaatIni.opsi.map((option) => (
-                <div key={option.value} className="flex items-center justify-between gap-4 border-b border-outline-variant/15 px-4 py-3 last:border-0">
-                  <span className="text-sm">{option.label}</span>
+                <div key={option.value} className="flex items-start justify-between gap-4 border-b border-outline-variant/15 px-4 py-3 last:border-0">
+                  <span className="text-sm">
+                    <span className="font-bold">{option.code ? `${option.code} · ` : ''}{option.label}</span>
+                    {option.description && <span className="mt-1 block text-xs leading-relaxed text-on-surface-variant">{option.description}</span>}
+                  </span>
                   <span className="text-lg font-bold text-primary">{option.bobot}</span>
                 </div>
               ))}
