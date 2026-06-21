@@ -52,6 +52,7 @@ export default function TambahSiswaPage() {
   const [accommodationSummary, setAccommodationSummary] = useState('')
   const [accommodationSuggestions, setAccommodationSuggestions] = useState<Array<{ value: string; alasan: string }>>([])
   const [manualAccommodation, setManualAccommodation] = useState('')
+  const [showManualAccommodation, setShowManualAccommodation] = useState(false)
   const [suggestingAccommodations, setSuggestingAccommodations] = useState(false)
   const [suggestion, setSuggestion] = useState<{ kategori: string; keyakinan: string; alasan: string; pertanyaan_lanjutan: string[]; strategi_awal: string[] } | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
@@ -352,30 +353,36 @@ export default function TambahSiswaPage() {
               </div>
             )}
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="block font-label-md text-on-surface-variant mb-2">Kekuatan dan minat siswa</span>
-                <textarea value={strengths} onChange={(event) => setStrengths(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Contoh: menyukai musik, kuat dalam komunikasi lisan..." />
-              </label>
-              <label className="block">
-                <span className="block font-label-md text-on-surface-variant mb-2">Riwayat perkembangan singkat</span>
-                <textarea value={developmentHistory} onChange={(event) => setDevelopmentHistory(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Kemampuan, hambatan, atau perubahan yang pernah diamati..." />
-              </label>
-              <label className="block">
-                <span className="block font-label-md text-on-surface-variant mb-2">Layanan yang pernah diterima</span>
-                <textarea value={previousServices} onChange={(event) => setPreviousServices(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Contoh: terapi wicara, pendampingan GPK, belum ada..." />
-              </label>
-              <label className="block">
-                <span className="block font-label-md text-on-surface-variant mb-2">Sumber rujukan atau identifikasi</span>
-                <textarea value={referralSource} onChange={(event) => setReferralSource(event.target.value)} rows={3} className="w-full px-5 py-4 rounded-3xl bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Contoh: pengamatan guru, orang tua, psikolog..." />
-              </label>
+            <div className="rounded-3xl border border-outline-variant/20 bg-surface-container-low/50 p-4 sm:p-5">
+              <div className="font-bold text-on-surface">Kenali siswa secara singkat</div>
+              <p className="mt-1 text-sm text-on-surface-variant">Isi yang diketahui saja. Bagian ini boleh dikosongkan dan dilengkapi kemudian.</p>
+              <div className="mt-4 space-y-4">
+                <label className="block">
+                  <span className="block text-sm font-bold text-on-surface mb-2">Apa yang disukai atau sudah dikuasai siswa?</span>
+                  <textarea value={strengths} onChange={(event) => setStrengths(event.target.value)} rows={2} className="w-full px-4 py-3 rounded-2xl bg-white border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Misalnya: suka musik dan mudah memahami penjelasan lisan." />
+                </label>
+                <label className="block">
+                  <span className="block text-sm font-bold text-on-surface mb-2">Apa yang perlu diketahui dari perkembangan siswa?</span>
+                  <textarea value={developmentHistory} onChange={(event) => setDevelopmentHistory(event.target.value)} rows={2} className="w-full px-4 py-3 rounded-2xl bg-white border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Misalnya: mulai lebih berani berbicara, tetapi masih sulit fokus lama." />
+                </label>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <label className="block">
+                    <span className="block text-sm font-bold text-on-surface mb-2">Pernah mendapat bantuan khusus?</span>
+                    <input value={previousServices} onChange={(event) => setPreviousServices(event.target.value)} className="w-full px-4 py-3 rounded-2xl bg-white border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Terapi, GPK, atau belum ada" />
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-bold text-on-surface mb-2">Informasi kebutuhan berasal dari siapa?</span>
+                    <input value={referralSource} onChange={(event) => setReferralSource(event.target.value)} className="w-full px-4 py-3 rounded-2xl bg-white border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Guru, orang tua, psikolog, atau lainnya" />
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div>
               <div className="rounded-3xl border border-primary/15 bg-primary/5 p-4 sm:p-5">
                 <div className="font-bold text-on-surface">Ceritakan hambatan yang terlihat saat belajar</div>
                 <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
-                  Guru cukup menulis dengan bahasa sehari-hari. Sistem akan mencocokkannya dengan katalog akomodasi dan menampilkan beberapa saran yang paling relevan.
+                  Tuliskan kondisi yang benar-benar terlihat di kelas. IncluEdu akan membantu menyiapkan beberapa dukungan yang dapat dicoba.
                 </p>
               </div>
 
@@ -420,19 +427,31 @@ export default function TambahSiswaPage() {
                 </div>
               )}
 
-              <label className="mt-4 block">
-                <span className="text-sm font-bold text-on-surface">Tambahkan dukungan dengan kalimat sendiri (opsional)</span>
-                <div className="mt-2 flex gap-2">
-                  <input value={manualAccommodation} onChange={(event) => setManualAccommodation(event.target.value)} onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      addAccommodation(manualAccommodation)
-                      setManualAccommodation('')
-                    }
-                  }} placeholder="Contoh: izinkan siswa menggunakan benda pereda gelisah" className="min-w-0 flex-1 rounded-2xl border border-outline-variant/30 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-                  <button type="button" onClick={() => { addAccommodation(manualAccommodation); setManualAccommodation('') }} disabled={!manualAccommodation.trim()} className="shrink-0 rounded-2xl bg-surface-container-high px-4 font-bold text-primary disabled:opacity-40">Tambah</button>
-                </div>
-              </label>
+              <div className="mt-4">
+                {!showManualAccommodation ? (
+                  <button type="button" onClick={() => setShowManualAccommodation(true)} className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+                    <Plus className="h-4 w-4" /> Ada dukungan lain yang belum tercantum?
+                  </button>
+                ) : (
+                  <div className="rounded-2xl border border-outline-variant/25 bg-white p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-bold text-on-surface">Tambahkan dukungan lain</span>
+                      <button type="button" onClick={() => { setShowManualAccommodation(false); setManualAccommodation('') }} className="rounded-full p-1.5 text-on-surface-variant hover:bg-surface-container" aria-label="Tutup"><X className="h-4 w-4" /></button>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <input value={manualAccommodation} onChange={(event) => setManualAccommodation(event.target.value)} onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          addAccommodation(manualAccommodation)
+                          setManualAccommodation('')
+                          setShowManualAccommodation(false)
+                        }
+                      }} placeholder="Contoh: boleh memegang benda kecil agar lebih tenang" className="min-w-0 flex-1 rounded-2xl border border-outline-variant/30 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                      <button type="button" onClick={() => { addAccommodation(manualAccommodation); setManualAccommodation(''); setShowManualAccommodation(false) }} disabled={!manualAccommodation.trim()} className="shrink-0 rounded-2xl bg-primary px-4 font-bold text-white disabled:opacity-40">Simpan</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {finalAccommodations.length > 0 && (
                 <div className="mt-4 rounded-2xl bg-[#E4F8EE] p-4">
