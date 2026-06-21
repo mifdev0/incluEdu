@@ -54,18 +54,23 @@ Susun satu tujuan jangka panjang, 2-4 tujuan jangka pendek, dan strategi pembela
 Setiap tujuan jangka pendek wajib memuat: area, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati.`
       )
       const goals = (Array.isArray(result.tujuan_jangka_pendek) ? result.tujuan_jangka_pendek : [])
-        .map((goal) => ({
-          area: String(goal.area || 'Kebutuhan belajar'),
-          tujuan: String(goal.tujuan || ''),
-          indikator: String(goal.indikator || 'Dievaluasi melalui observasi berkala'),
-          target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
-          aktivitas: String(goal.aktivitas || ''),
-          media_alat: String(goal.media_alat || ''),
-          pelaksana: String(goal.pelaksana || 'Guru kelas'),
-          frekuensi: String(goal.frekuensi || 'Disesuaikan jadwal pembelajaran'),
-          metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
-          langkah_tugas: Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas.map(String).filter(Boolean).slice(0, 6) : [],
-        }))
+        .map((goal) => {
+          const tujuan = String(goal.tujuan || '')
+          const indikator = String(goal.indikator || '')
+          const generatedSteps = Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas.map(String).filter(Boolean).slice(0, 6) : []
+          return {
+            area: String(goal.area || 'Kebutuhan belajar'),
+            tujuan,
+            indikator: indikator || tujuan,
+            target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
+            aktivitas: String(goal.aktivitas || ''),
+            media_alat: String(goal.media_alat || ''),
+            pelaksana: String(goal.pelaksana || 'Guru kelas'),
+            frekuensi: String(goal.frekuensi || 'Disesuaikan jadwal pembelajaran'),
+            metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
+            langkah_tugas: generatedSteps.length > 0 ? generatedSteps : [indikator || tujuan].filter(Boolean),
+          }
+        })
         .filter((goal) => goal.tujuan.length > 0)
       return NextResponse.json({
         tujuan_jangka_panjang: String(result.tujuan_jangka_panjang || ''),

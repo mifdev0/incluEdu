@@ -50,13 +50,16 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
   const [error, setError] = useState('')
   const dimensiKhusus = DIMENSI_KHUSUS[kategori] || []
   const goalDimensions: DimensiItem[] = activeGoals.flatMap((goal) => {
-    const taskSteps = Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0
+    const hasTaskAnalysis = Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0
+    const taskSteps = hasTaskAnalysis
       ? goal.langkah_tugas
-      : [goal.indikator]
+      : [goal.indikator && goal.indikator !== 'Dievaluasi melalui observasi berkala' ? goal.indikator : goal.tujuan]
     return taskSteps.map((task, index) => ({
       key: `task_${goal.id}_${index}`,
-      label: `Analisis tugas · ${goal.area}`,
-      pertanyaan: `${task} Tingkat bantuan apa yang dibutuhkan ${studentName} pada langkah ini?`,
+      label: `${hasTaskAnalysis ? 'Analisis tugas' : 'Tujuan PPI'} · ${goal.area}`,
+      pertanyaan: hasTaskAnalysis
+        ? `${task} Tingkat bantuan apa yang dibutuhkan ${studentName} pada langkah ini?`
+        : `Saat menjalankan tujuan “${task}”, tingkat bantuan apa yang dibutuhkan ${studentName}?`,
       opsi: assistanceOptions,
     }))
   })
@@ -106,7 +109,7 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
 
   const pertanyaanSaatIni = semuaDimensi[step]
   const total = semuaDimensi.length
-  const terjawab = Object.keys(jawaban).length
+  const terjawab = semuaDimensi.filter((dimension) => Boolean(jawaban[dimension.key])).length
   const pct = Math.round((terjawab / total) * 100)
   const semuaTerisi = semuaDimensi.every(d => jawaban[d.key])
 

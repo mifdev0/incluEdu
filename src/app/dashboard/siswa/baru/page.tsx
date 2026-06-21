@@ -176,7 +176,7 @@ export default function TambahSiswaPage() {
           ppi_id: ppi.id,
           area: String(goal.area || 'Kebutuhan belajar'),
           tujuan: String(goal.tujuan || goal.deskripsi || ''),
-          indikator: String(goal.indikator || 'Dievaluasi melalui observasi berkala'),
+          indikator: String(goal.indikator || goal.tujuan || 'Indikator perlu ditinjau guru'),
           target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
           capaian: 0,
           status: 'belum_dimulai',
@@ -185,7 +185,9 @@ export default function TambahSiswaPage() {
           pelaksana: String(goal.pelaksana || 'Guru kelas'),
           frekuensi: String(goal.frekuensi || ''),
           metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
-          langkah_tugas: Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas.map(String).filter(Boolean) : [],
+          langkah_tugas: Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0
+            ? goal.langkah_tugas.map(String).filter(Boolean)
+            : [String(goal.indikator || goal.tujuan || '')].filter(Boolean),
         }))
         .filter((goal: { tujuan: string }) => goal.tujuan.trim().length > 0)
       if (goals.length === 0) throw new Error('AI tidak menghasilkan tujuan PPI yang dapat disimpan.')

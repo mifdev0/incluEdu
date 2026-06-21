@@ -270,9 +270,13 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                   </div>
                   <div className="mt-3 rounded-2xl bg-primary/5 p-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-primary"><ListChecks className="w-4 h-4" /> ANALISIS TUGAS</div>
-                    <ol className="mt-2 space-y-1 text-sm list-decimal pl-5">
-                      {(Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? goal.langkah_tugas : [goal.indikator]).map((step) => <li key={step}>{step}</li>)}
-                    </ol>
+                    {Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? (
+                      <ol className="mt-2 space-y-1 text-sm list-decimal pl-5">
+                        {goal.langkah_tugas.map((step) => <li key={step}>{step}</li>)}
+                      </ol>
+                    ) : (
+                      <p className="mt-2 text-sm text-on-surface-variant">Tujuan lama ini belum dipecah menjadi langkah kecil. Gunakan tombol evaluasi atau revisi untuk menambahkan analisis tugas.</p>
+                    )}
                     <p className="mt-2 text-xs text-on-surface-variant">Evaluasi: {goal.metode_evaluasi || 'Observasi kinerja'}</p>
                   </div>
                   <div className="mt-4">
