@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { deepseekJson } from '@/lib/deepseek'
 import { applyObservationScores, normalizeAnalysis } from '@/lib/analysis-normalizer'
 import { observationsToProgress, progressTrend, type ObservationRow } from '@/lib/observation-progress'
+import { ACCOMMODATION_OPTIONS, recommendedAccommodations } from '@/lib/accommodation-data'
 
 export const runtime = 'nodejs'
 
@@ -76,6 +77,45 @@ Setiap tujuan jangka pendek wajib memuat: area, tujuan, indikator terukur, targe
         tujuan_jangka_panjang: String(result.tujuan_jangka_panjang || ''),
         tujuan_jangka_pendek: goals,
         strategi: Array.isArray(result.strategi) ? result.strategi.map(String) : [],
+      })
+    }
+
+    if (body.action === 'accommodations') {
+      const catalog = ACCOMMODATION_OPTIONS.map((option) => ({
+        value: option.value,
+        group: option.group,
+        reference: option.when,
+      }))
+      const result = await deepseekJson<{
+        ringkasan: string
+        saran: Array<{ value: string; alasan: string }>
+      }>(
+        'Kamu membantu guru memilih akomodasi pembelajaran, bukan mendiagnosis siswa. Gunakan hanya pilihan yang tersedia dalam katalog. Pilih sedikit tetapi relevan berdasarkan hambatan yang benar-benar diamati.',
+        `Kategori kebutuhan yang telah dikonfirmasi guru: ${String(body.category || 'belum diketahui')}
+Deskripsi hambatan dari guru:
+${String(body.description || '')}
+
+Katalog akomodasi:
+${JSON.stringify(catalog)}
+
+Kembalikan JSON berisi ringkasan singkat dan 3-6 saran. Setiap saran wajib memiliki value yang sama persis dengan salah satu value dalam katalog dan alasan praktis satu kalimat.`,
+        1400,
+      )
+      const allowed = new Set(ACCOMMODATION_OPTIONS.map((option) => option.value))
+      const suggestions = (Array.isArray(result.saran) ? result.saran : [])
+        .filter((item) => allowed.has(String(item.value)))
+        .map((item) => ({ value: String(item.value), alasan: String(item.alasan || '') }))
+        .filter((item, index, items) => items.findIndex((other) => other.value === item.value) === index)
+        .slice(0, 6)
+      const fallbackSuggestions = recommendedAccommodations(String(body.category || 'lainnya'))
+        .slice(0, 3)
+        .map((option) => ({
+          value: option.value,
+          alasan: option.when.replace(/^Pilih jika /, 'Relevan ketika '),
+        }))
+      return NextResponse.json({
+        ringkasan: String(result.ringkasan || ''),
+        saran: suggestions.length > 0 ? suggestions : fallbackSuggestions,
       })
     }
 
