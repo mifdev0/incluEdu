@@ -9,6 +9,8 @@ import { ArrowUpRight, Brain, Heart, MessageCircle, Target } from 'lucide-react'
 import { FullPageLoading } from '@/components/loading-state'
 import { supabase } from '@/lib/supabase'
 import { observationsToProgress, progressTrend, type ObservationRow } from '@/lib/observation-progress'
+import { getScoreDetails, type ScoreAspect } from '@/lib/score-breakdown'
+import { ScoreDetailModal } from '@/components/score-detail-modal'
 
 type Student = {
   id: string
@@ -26,6 +28,8 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const [goalCount, setGoalCount] = useState(0)
   const [dataLoading, setDataLoading] = useState(true)
   const [error, setError] = useState('')
+  const [observations, setObservations] = useState<ObservationRow[]>([])
+  const [selectedScore, setSelectedScore] = useState<'average' | ScoreAspect | null>(null)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -40,7 +44,9 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
         setError(studentResult.error.message)
       } else {
         setStudent(studentResult.data)
-        setProgress(observationsToProgress((observationsResult.data || []) as ObservationRow[], studentResult.data.kategori))
+        const rows = (observationsResult.data || []) as ObservationRow[]
+        setObservations(rows)
+        setProgress(observationsToProgress(rows, studentResult.data.kategori))
       }
       if (ppiResult.data) {
         const { count } = await supabase.from('tujuan_ppi').select('id', { count: 'exact', head: true }).eq('ppi_id', ppiResult.data.id)
@@ -59,6 +65,28 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const previousAverage = first ? Math.round((first.kognitif + first.fokus + first.sosial + first.emosi) / 4) : null
   const change = average !== null && previousAverage !== null ? average - previousAverage : null
   const trend = progressTrend(progress)
+  const latestObservation = observations[observations.length - 1]
+  const latestPeriod = latestObservation
+    ? `Berdasarkan observasi minggu ke-${latestObservation.minggu_ke}${latestObservation.tanggal ? ` · ${new Date(latestObservation.tanggal).toLocaleDateString('id-ID')}` : ''}`
+    : 'Belum ada observasi'
+  const aspectConfig: Record<ScoreAspect, { title: string; score: number }> | null = latest ? {
+    kognitif: { title: 'Kognitif', score: latest.kognitif },
+    fokus: { title: 'Fokus', score: latest.fokus },
+    sosial: { title: 'Sosial', score: latest.sosial },
+    emosi: { title: 'Emosi', score: latest.emosi },
+  } : null
+  const selectedDetails = selectedScore && selectedScore !== 'average' && latestObservation
+    ? getScoreDetails(latestObservation.jawaban, student.kategori, selectedScore)
+    : []
+  const selectedAspectScore = selectedScore && selectedScore !== 'average' && aspectConfig
+    ? aspectConfig[selectedScore].score
+    : 0
+  const detailWeights = selectedDetails.map((detail) => detail.weight)
+  const detailFormula = selectedScore === 'average' && latest
+    ? `(${latest.kognitif} Kognitif + ${latest.fokus} Fokus + ${latest.sosial} Sosial + ${latest.emosi} Emosi) ÷ 4 = ${average}`
+    : detailWeights.length > 0
+      ? `(${detailWeights.join(' + ')}) ÷ ${detailWeights.length} = ${selectedAspectScore}`
+      : 'Nilai dasar digunakan karena indikator khusus belum tersedia pada observasi ini.'
 
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
@@ -86,24 +114,26 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
         {latest ? (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-md">
-              <div className="col-span-2 lg:col-span-1 rounded-2xl bg-primary text-white p-4">
+              <button type="button" onClick={() => setSelectedScore('average')} className="col-span-2 lg:col-span-1 rounded-2xl bg-primary text-white p-4 text-left hover:-translate-y-0.5 transition-transform">
                 <div className="text-sm text-white/75">Rata-rata saat ini</div>
                 <div className="flex items-end justify-between mt-2">
                   <span className="text-3xl font-bold">{average}</span>
                   {change !== null && <span className="inline-flex items-center gap-1 text-xs font-bold bg-white/15 px-2 py-1 rounded-full"><ArrowUpRight className="w-3 h-3" /> {change >= 0 ? '+' : ''}{change}</span>}
                 </div>
-              </div>
+                <div className="text-[11px] text-white/60 mt-3">Klik untuk melihat rumus</div>
+              </button>
               {[
                 { label: 'Kognitif', value: latest.kognitif, icon: Brain, color: 'text-primary', bg: 'bg-primary/10' },
                 { label: 'Fokus', value: latest.fokus, icon: Target, color: 'text-cyan-700', bg: 'bg-cyan-100' },
                 { label: 'Sosial', value: latest.sosial, icon: MessageCircle, color: 'text-secondary', bg: 'bg-secondary-container/40' },
                 { label: 'Emosi', value: latest.emosi, icon: Heart, color: 'text-amber-700', bg: 'bg-amber-100' },
               ].map((item) => (
-                <div key={item.label} className="rounded-2xl bg-white border border-outline-variant/20 p-4">
+                <button key={item.label} type="button" onClick={() => setSelectedScore(item.label.toLowerCase() as ScoreAspect)} className="rounded-2xl bg-white border border-outline-variant/20 p-4 text-left hover:-translate-y-0.5 hover:border-primary/30 transition-all">
                   <div className={`w-9 h-9 rounded-xl ${item.bg} ${item.color} flex items-center justify-center mb-3`}><item.icon className="w-4 h-4" /></div>
                   <div className="text-2xl font-bold">{item.value}</div>
                   <div className="text-xs text-on-surface-variant mt-1">{item.label}</div>
-                </div>
+                  <div className="text-[10px] text-primary font-bold mt-3">Lihat sumber nilai</div>
+                </button>
               ))}
             </div>
 
@@ -144,6 +174,17 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
           <a href={`/dashboard/siswa/${params.id}/rapor`} className="px-6 py-3 text-center rounded-full bg-primary text-white font-bold">Lihat Rapor</a>
         </div>
       </main>
+      {latest && selectedScore && (
+        <ScoreDetailModal
+          open
+          title={selectedScore === 'average' ? 'Rata-rata keseluruhan' : aspectConfig?.[selectedScore]?.title || ''}
+          score={selectedScore === 'average' ? average || 0 : selectedAspectScore}
+          period={latestPeriod}
+          details={selectedDetails}
+          formula={detailFormula}
+          onClose={() => setSelectedScore(null)}
+        />
+      )}
     </div>
   )
 }

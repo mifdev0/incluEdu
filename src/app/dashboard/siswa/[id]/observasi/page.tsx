@@ -7,7 +7,7 @@ import { DIMENSI_UNIVERSAL, DIMENSI_KHUSUS, type DimensiItem, type KategoriABK }
 import { BrandLogo } from '@/components/brand-logo'
 import { supabase } from '@/lib/supabase'
 import { FullPageLoading } from '@/components/loading-state'
-import { ArrowRight, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Scale, X } from 'lucide-react'
 import { normalizeObservationCategory } from '@/lib/observation-progress'
 
 type ActiveGoal = {
@@ -53,6 +53,7 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
   const [catatan, setCatatan] = useState('')
   const [step, setStep] = useState(0)
   const [completed, setCompleted] = useState(false)
+  const [rubricOpen, setRubricOpen] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
@@ -156,7 +157,12 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
     if (step < total) {
       return (
         <div className="bg-surface rounded-3xl p-5 sm:p-lg border border-outline-variant/20 hard-shadow">
-          <p className="text-xs font-label-sm text-primary uppercase tracking-wider mb-1">{pertanyaanSaatIni.label}</p>
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <p className="text-xs font-label-sm text-primary uppercase tracking-wider">{pertanyaanSaatIni.label}</p>
+            <button type="button" onClick={() => setRubricOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold text-on-surface-variant hover:text-primary">
+              <Scale className="w-3.5 h-3.5" /> Lihat rubrik
+            </button>
+          </div>
           <p className="font-headline-sm text-headline-sm text-on-surface mb-md">{pertanyaanSaatIni.pertanyaan}</p>
           <div className="space-y-3">
             {pertanyaanSaatIni.opsi.map((o) => (
@@ -265,6 +271,34 @@ export default function ObservasiSiswaPage({ params }: { params: { id: string } 
 
         <FormContent />
       </main>
+
+      {rubricOpen && step < total && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/35 px-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-3xl bg-white p-5 sm:p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-primary">Rubrik penilaian</div>
+                <h2 className="text-xl font-bold mt-1">{pertanyaanSaatIni.label}</h2>
+              </div>
+              <button type="button" onClick={() => setRubricOpen(false)} className="p-2 rounded-full hover:bg-surface-container" aria-label="Tutup">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-on-surface-variant mt-2">
+              Bobot digunakan sistem untuk menghitung perkembangan. Pilih jawaban berdasarkan kondisi yang benar-benar diamati.
+            </p>
+            <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant/20">
+              {pertanyaanSaatIni.opsi.map((option) => (
+                <div key={option.value} className="flex items-center justify-between gap-4 border-b border-outline-variant/15 px-4 py-3 last:border-0">
+                  <span className="text-sm">{option.label}</span>
+                  <span className="text-lg font-bold text-primary">{option.bobot}</span>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={() => setRubricOpen(false)} className="w-full mt-5 py-3 rounded-full bg-primary text-white font-bold">Saya mengerti</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
