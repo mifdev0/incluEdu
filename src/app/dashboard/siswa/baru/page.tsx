@@ -51,8 +51,6 @@ export default function TambahSiswaPage() {
   const [accommodationDescription, setAccommodationDescription] = useState('')
   const [accommodationSummary, setAccommodationSummary] = useState('')
   const [accommodationSuggestions, setAccommodationSuggestions] = useState<Array<{ value: string; alasan: string }>>([])
-  const [manualAccommodation, setManualAccommodation] = useState('')
-  const [showManualAccommodation, setShowManualAccommodation] = useState(false)
   const [suggestingAccommodations, setSuggestingAccommodations] = useState(false)
   const [suggestion, setSuggestion] = useState<{ kategori: string; keyakinan: string; alasan: string; pertanyaan_lanjutan: string[]; strategi_awal: string[] } | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
@@ -426,32 +424,6 @@ export default function TambahSiswaPage() {
                   </div>
                 </div>
               )}
-
-              <div className="mt-4">
-                {!showManualAccommodation ? (
-                  <button type="button" onClick={() => setShowManualAccommodation(true)} className="inline-flex items-center gap-2 text-sm font-bold text-primary">
-                    <Plus className="h-4 w-4" /> Ada dukungan lain yang belum tercantum?
-                  </button>
-                ) : (
-                  <div className="rounded-2xl border border-outline-variant/25 bg-white p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-bold text-on-surface">Tambahkan dukungan lain</span>
-                      <button type="button" onClick={() => { setShowManualAccommodation(false); setManualAccommodation('') }} className="rounded-full p-1.5 text-on-surface-variant hover:bg-surface-container" aria-label="Tutup"><X className="h-4 w-4" /></button>
-                    </div>
-                    <div className="mt-2 flex gap-2">
-                      <input value={manualAccommodation} onChange={(event) => setManualAccommodation(event.target.value)} onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault()
-                          addAccommodation(manualAccommodation)
-                          setManualAccommodation('')
-                          setShowManualAccommodation(false)
-                        }
-                      }} placeholder="Contoh: boleh memegang benda kecil agar lebih tenang" className="min-w-0 flex-1 rounded-2xl border border-outline-variant/30 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-                      <button type="button" onClick={() => { addAccommodation(manualAccommodation); setManualAccommodation(''); setShowManualAccommodation(false) }} disabled={!manualAccommodation.trim()} className="shrink-0 rounded-2xl bg-primary px-4 font-bold text-white disabled:opacity-40">Simpan</button>
-                    </div>
-                  </div>
-                )}
-              </div>
 
               {finalAccommodations.length > 0 && (
                 <div className="mt-4 rounded-2xl bg-[#E4F8EE] p-4">
