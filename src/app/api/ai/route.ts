@@ -119,6 +119,71 @@ Kembalikan JSON berisi ringkasan singkat dan 3-6 saran. Setiap saran wajib memil
       })
     }
 
+    if (body.action === 'assessment-summary') {
+      const result = await deepseekJson<{
+        kekuatan: string[]
+        kebutuhan: string[]
+        ringkasan: string
+        saran_referral: string
+      }>(
+        'Kamu adalah asisten PPI pendidikan inklusif. Rangkum data asesmen guru secara objektif. Jangan mendiagnosis. Gunakan istilah kekuatan dan kebutuhan dukungan, bukan label negatif.',
+        `Profil siswa: ${JSON.stringify(body.student)}
+Hasil checklist asesmen: ${JSON.stringify(body.assessment)}
+
+Kembalikan JSON berisi 3-6 kekuatan, 3-6 kebutuhan, ringkasan maksimal 3 kalimat, dan saran_referral singkat bila perlu. Jangan membuat kemampuan yang tidak tercatat.`,
+        1600,
+      )
+      return NextResponse.json({
+        kekuatan: Array.isArray(result.kekuatan) ? result.kekuatan.map(String).slice(0, 6) : [],
+        kebutuhan: Array.isArray(result.kebutuhan) ? result.kebutuhan.map(String).slice(0, 6) : [],
+        ringkasan: String(result.ringkasan || ''),
+        saran_referral: String(result.saran_referral || ''),
+      })
+    }
+
+    if (body.action === 'tracking-alert') {
+      const result = await deepseekJson<{
+        alert: boolean
+        ringkasan: string
+        saran_modifikasi: string[]
+      }>(
+        'Kamu membantu guru mengevaluasi strategi PPI dari log tingkat bantuan. Jangan menyalahkan siswa. Berikan modifikasi pembelajaran yang praktis.',
+        `Tujuan: ${JSON.stringify(body.goal)}
+Log 14 hari terakhir: ${JSON.stringify(body.tracking)}
+
+Jika data menunjukkan stagnasi terutama tetap pada Bf selama sekitar dua minggu, alert harus true. Kembalikan ringkasan dan maksimal 4 saran_modifikasi.`,
+        1200,
+      )
+      return NextResponse.json({
+        alert: Boolean(result.alert),
+        ringkasan: String(result.ringkasan || ''),
+        saran_modifikasi: Array.isArray(result.saran_modifikasi) ? result.saran_modifikasi.map(String).slice(0, 4) : [],
+      })
+    }
+
+    if (body.action === 'evaluation-v2') {
+      const result = await deepseekJson<{
+        ringkasan_semester: string
+        evaluasi_target: Array<{ tujuan_id: string; narasi: string; rekomendasi: 'lanjut' | 'remedial' }>
+        rekomendasi_guru: string[]
+        rekomendasi_orang_tua: string[]
+      }>(
+        'Kamu menyusun evaluasi PPI berbasis data yang sudah dihitung sistem. Jangan mengubah angka. Gunakan bahasa empatik, konkret, dan tidak membandingkan siswa dengan standar teman sekelas.',
+        `Profil siswa: ${JSON.stringify(body.student)}
+Hasil target yang telah dihitung sistem: ${JSON.stringify(body.results)}
+Tim PPI: ${JSON.stringify(body.team)}
+
+Kembalikan JSON: ringkasan_semester, evaluasi_target (tujuan_id harus sama dengan input, narasi, rekomendasi lanjut/remedial), rekomendasi_guru, dan rekomendasi_orang_tua.`,
+        2400,
+      )
+      return NextResponse.json({
+        ringkasan_semester: String(result.ringkasan_semester || ''),
+        evaluasi_target: Array.isArray(result.evaluasi_target) ? result.evaluasi_target : [],
+        rekomendasi_guru: Array.isArray(result.rekomendasi_guru) ? result.rekomendasi_guru.map(String) : [],
+        rekomendasi_orang_tua: Array.isArray(result.rekomendasi_orang_tua) ? result.rekomendasi_orang_tua.map(String) : [],
+      })
+    }
+
     if (body.action === 'report') {
       const result = await deepseekJson(
         'Kamu adalah asisten pendidikan inklusif yang menyusun evaluasi perkembangan berbasis data observasi dan tujuan PPI. Gunakan bahasa empatik dan tidak membandingkan siswa dengan teman.',

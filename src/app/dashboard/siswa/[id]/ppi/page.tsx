@@ -30,6 +30,11 @@ const emptyGoalForm = {
   langkah_tugas: ['', ''],
   catatan_evaluasi: '',
   tindak_lanjut: 'lanjutkan',
+  jenis_target: 'non_akademik',
+  cp_id: '',
+  kriteria_tuntas: '',
+  skor_benar_target: '',
+  skor_total_target: '',
 }
 
 export default function PpiPage({ params }: { params: { id: string } }) {
@@ -49,6 +54,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [goalError, setGoalError] = useState('')
   const [editingGoal, setEditingGoal] = useState<PpiGoal | null>(null)
   const [goalForm, setGoalForm] = useState(emptyGoalForm)
+  const [cpOptions, setCpOptions] = useState<Array<{ id: string; mata_pelajaran: string; fase: string; jenjang: string; nama_elemen: string; deskripsi_cp: string; indikator_operasional: string[] }>>([])
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -65,8 +71,12 @@ export default function PpiPage({ params }: { params: { id: string } }) {
         setStrategies(Array.isArray(data.strategi) ? data.strategi as string[] : [])
         setPeriod(`${data.periode_mulai} – ${data.periode_selesai}`)
         setDaysUntilEvaluation(Math.max(0, Math.ceil((new Date(data.periode_selesai).getTime() - Date.now()) / 86400000)))
-        const { data: goalRows } = await supabase.from('tujuan_ppi').select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas').eq('ppi_id', data.id).order('created_at')
+        const [{ data: goalRows }, { data: curriculumRows }] = await Promise.all([
+          supabase.from('tujuan_ppi').select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas, jenis_target, cp_id, fase_adaptasi, kriteria_tuntas, skor_benar_target, skor_total_target').eq('ppi_id', data.id).order('created_at'),
+          supabase.from('curriculum_cp').select('id, mata_pelajaran, fase, jenjang, nama_elemen, deskripsi_cp, indikator_operasional').order('mata_pelajaran').order('fase'),
+        ])
         setGoals((goalRows || []) as PpiGoal[])
+        setCpOptions((curriculumRows || []) as typeof cpOptions)
         setDataLoading(false)
       })
     }
@@ -97,6 +107,11 @@ export default function PpiPage({ params }: { params: { id: string } }) {
       langkah_tugas: Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? goal.langkah_tugas : ['', ''],
       catatan_evaluasi: '',
       tindak_lanjut: goal.status === 'tercapai' ? 'tercapai' : 'lanjutkan',
+      jenis_target: goal.jenis_target || 'non_akademik',
+      cp_id: goal.cp_id || '',
+      kriteria_tuntas: goal.kriteria_tuntas || '',
+      skor_benar_target: goal.skor_benar_target?.toString() || '',
+      skor_total_target: goal.skor_total_target?.toString() || '',
     })
     setGoalError('')
     setGoalModalOpen(true)
@@ -133,6 +148,14 @@ export default function PpiPage({ params }: { params: { id: string } }) {
       metode_evaluasi: goalForm.metode_evaluasi.trim(),
       langkah_tugas: taskSteps,
       updated_at: new Date().toISOString(),
+      jenis_target: goalForm.jenis_target,
+      cp_id: goalForm.jenis_target === 'akademik' && goalForm.cp_id ? goalForm.cp_id : null,
+      fase_adaptasi: goalForm.jenis_target === 'akademik' && goalForm.cp_id
+        ? cpOptions.find((item) => item.id === goalForm.cp_id)?.fase || null
+        : null,
+      kriteria_tuntas: goalForm.kriteria_tuntas.trim() || `Tuntas apabila mencapai minimal ${goalForm.target}%`,
+      skor_benar_target: goalForm.jenis_target === 'akademik' && goalForm.skor_benar_target ? Number(goalForm.skor_benar_target) : null,
+      skor_total_target: goalForm.jenis_target === 'akademik' && goalForm.skor_total_target ? Number(goalForm.skor_total_target) : null,
     }
     const query = editingGoal
       ? supabase.from('tujuan_ppi').update({
@@ -152,13 +175,28 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           status: 'belum_dimulai',
         })
     const { data, error } = await query
-      .select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas')
+      .select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas, jenis_target, cp_id, fase_adaptasi, kriteria_tuntas, skor_benar_target, skor_total_target')
       .single()
 
     if (error || !data) {
       setSavingGoal(false)
       setGoalError(error?.message || 'Tujuan belum berhasil disimpan.')
       return
+    }
+
+    await supabase.from('goal_accommodations').delete().eq('tujuan_ppi_id', data.id)
+    const accommodations = [
+      payload.media_alat ? { tujuan_ppi_id: data.id, jenis: 'media', deskripsi: payload.media_alat } : null,
+      payload.aktivitas ? { tujuan_ppi_id: data.id, jenis: 'strategi', deskripsi: payload.aktivitas } : null,
+      payload.frekuensi ? { tujuan_ppi_id: data.id, jenis: 'durasi', deskripsi: payload.frekuensi } : null,
+    ].filter((item): item is { tujuan_ppi_id: string; jenis: string; deskripsi: string } => item !== null)
+    if (accommodations.length > 0) {
+      const { error: accommodationError } = await supabase.from('goal_accommodations').insert(accommodations)
+      if (accommodationError) {
+        setSavingGoal(false)
+        setGoalError(`Tujuan tersimpan, tetapi akomodasi belum tersimpan: ${accommodationError.message}`)
+        return
+      }
     }
 
     if (editingGoal && user) {
@@ -194,7 +232,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             <a href={`/dashboard/siswa/${params.id}`} className="font-label-md text-on-surface-variant">← <span className="hidden min-[390px]:inline">Profil</span></a>
             <a href="/dashboard"><BrandLogo compact mobileIconOnly /></a>
           </div>
-          <a href={`/dashboard/siswa/${params.id}/observasi`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Isi observasi</a>
+          <a href={`/dashboard/siswa/${params.id}/observasi`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Tracking harian</a>
         </nav>
       </header>
 
@@ -234,7 +272,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           <section className="space-y-4">
             <div>
               <h2 className="font-headline-sm text-headline-sm">Tujuan pembelajaran individual</h2>
-              <p className="text-sm text-on-surface-variant mt-1">Observasi mingguan akan mengukur kemajuan terhadap tujuan berikut.</p>
+              <p className="text-sm text-on-surface-variant mt-1">Tracking harian mengukur kemajuan terhadap target dan kriteria ketuntasan berikut.</p>
             </div>
             {!hasPpi && (
               <div className="rounded-3xl border-2 border-dashed border-outline-variant/40 bg-white p-8 text-center">
@@ -250,6 +288,10 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                     <div>
                       <span className="text-xs font-bold text-primary">{goal.area.toUpperCase()}</span>
                       <h3 className="text-lg font-bold mt-1">{goal.tujuan}</h3>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">{goal.jenis_target === 'akademik' ? 'Target akademik' : 'Target non-akademik'}</span>
+                        {goal.fase_adaptasi && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">CP Fase {goal.fase_adaptasi}</span>}
+                      </div>
                     </div>
                     <span className={`w-fit px-3 py-1.5 rounded-full text-xs font-bold ${status.style}`}>{status.label}</span>
                   </div>
@@ -282,6 +324,10 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                   <div className="mt-4">
                     <div className="flex justify-between text-sm font-bold mb-2"><span>Capaian saat ini</span><span>{goal.capaian}% dari target {goal.target}%</span></div>
                     <div className="h-3 bg-surface-container-high rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((goal.capaian / goal.target) * 100, 100)}%` }} /></div>
+                  </div>
+                  <div className="mt-3 rounded-2xl border border-outline-variant/20 p-4">
+                    <div className="text-xs font-bold text-on-surface-variant">KRITERIA KETUNTASAN</div>
+                    <p className="mt-1 text-sm font-semibold">{goal.kriteria_tuntas || `Tuntas apabila mencapai ${goal.target}%`}</p>
                   </div>
                   <button type="button" onClick={() => openEditGoal(goal)} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-primary">
                     <Pencil className="w-4 h-4" /> Evaluasi atau revisi tujuan
@@ -347,6 +393,29 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                   className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary"
                 />
               </label>
+              <div className="rounded-2xl border border-outline-variant/25 bg-surface-container-low p-4">
+                <div className="text-sm font-bold">Jenis target</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {[['akademik', 'Akademik / mapel'], ['non_akademik', 'Non-akademik']].map(([value, label]) => <button key={value} type="button" onClick={() => setGoalForm((current) => ({ ...current, jenis_target: value }))} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${goalForm.jenis_target === value ? 'border-primary bg-primary text-white' : 'bg-white'}`}>{label}</button>)}
+                </div>
+              </div>
+              {goalForm.jenis_target === 'akademik' && (
+                <label className="block">
+                  <span className="text-sm font-bold text-on-surface">Capaian Pembelajaran yang diadaptasi</span>
+                  <select value={goalForm.cp_id} onChange={(event) => {
+                    const cp = cpOptions.find((item) => item.id === event.target.value)
+                    setGoalForm((current) => ({
+                      ...current,
+                      cp_id: event.target.value,
+                      area: cp ? `${cp.mata_pelajaran} · ${cp.nama_elemen}` : current.area,
+                    }))
+                  }} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3">
+                    <option value="">Pilih CP lintas fase</option>
+                    {cpOptions.map((cp) => <option key={cp.id} value={cp.id}>{cp.mata_pelajaran} · Fase {cp.fase} · {cp.nama_elemen}</option>)}
+                  </select>
+                  {goalForm.cp_id && <p className="mt-2 rounded-2xl bg-primary/5 p-3 text-xs leading-relaxed text-on-surface-variant">{cpOptions.find((item) => item.id === goalForm.cp_id)?.deskripsi_cp}</p>}
+                </label>
+              )}
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="block">
                   <span className="text-sm font-bold text-on-surface">Aktivitas pembelajaran</span>
@@ -369,6 +438,16 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                 <span className="text-sm font-bold text-on-surface">Metode evaluasi</span>
                 <input value={goalForm.metode_evaluasi} onChange={(event) => setGoalForm((current) => ({ ...current, metode_evaluasi: event.target.value }))} placeholder="Contoh: tes kinerja dan observasi langsung" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
               </label>
+              <label className="block">
+                <span className="text-sm font-bold text-on-surface">Kriteria ketuntasan</span>
+                <input value={goalForm.kriteria_tuntas} onChange={(event) => setGoalForm((current) => ({ ...current, kriteria_tuntas: event.target.value }))} placeholder="Contoh: Tuntas jika benar 8 dari 10 soal" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3" />
+              </label>
+              {goalForm.jenis_target === 'akademik' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <label><span className="text-sm font-bold">Jawaban benar target</span><input type="number" min="0" value={goalForm.skor_benar_target} onChange={(event) => setGoalForm((current) => ({ ...current, skor_benar_target: event.target.value }))} placeholder="8" className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" /></label>
+                  <label><span className="text-sm font-bold">Total soal / tugas</span><input type="number" min="1" value={goalForm.skor_total_target} onChange={(event) => setGoalForm((current) => ({ ...current, skor_total_target: event.target.value }))} placeholder="10" className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" /></label>
+                </div>
+              )}
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-bold text-on-surface">Langkah analisis tugas</span>

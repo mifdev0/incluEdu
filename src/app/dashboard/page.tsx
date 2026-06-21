@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useState } from 'react'
 import { FullPageLoading } from '@/components/loading-state'
 
-type ClassCard = { id: string; nama: string; jenjang: string; siswa: number; observasi: number; warna: string; aksen: string; namaSiswa: string[] }
+type ClassCard = { id: string; nama: string; jenjang: string; siswa: number; tracking: number; warna: string; aksen: string; namaSiswa: string[] }
 type AttentionStudent = { id: string; nama: string; days: number | null }
 
 export default function DashboardPage() {
@@ -25,9 +25,9 @@ export default function DashboardPage() {
     if (user) {
       Promise.all([
         supabase.from('kelas').select('id, nama, jenjang').order('created_at'),
-        supabase.from('siswa').select('id, nama, kelas_id, observasi(tanggal)'),
+        supabase.from('siswa').select('id, nama, kelas_id, daily_tracking(tanggal)'),
         supabase.from('tujuan_ppi').select('id, ppi!inner(siswa!inner(guru_id))').neq('status', 'tercapai'),
-        supabase.from('observasi').select('id, siswa_id, siswa!inner(kelas_id)').gte('tanggal', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
+        supabase.from('daily_tracking').select('id, siswa_id, siswa!inner(kelas_id)').gte('tanggal', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
       ]).then(([classesResult, studentsResult, goalsResult, observationsResult]) => {
         const students = studentsResult.data || []
         const observations = observationsResult.data || []
@@ -41,14 +41,14 @@ export default function DashboardPage() {
           return {
             ...item,
             siswa: classStudents.length,
-            observasi: observations.filter((observation) => (observation.siswa as unknown as { kelas_id: string })?.kelas_id === item.id).length,
+            tracking: observations.filter((observation) => (observation.siswa as unknown as { kelas_id: string })?.kelas_id === item.id).length,
             namaSiswa: classStudents.slice(0, 3).map((student) => student.nama),
             ...colors[index % colors.length],
           }
         }))
         setActiveGoals(goalsResult.data?.length || 0)
         setAttentionStudents(students.map((student) => {
-          const dates = ((student.observasi || []) as Array<{ tanggal: string }>).map((item) => new Date(item.tanggal).getTime())
+          const dates = ((student.daily_tracking || []) as Array<{ tanggal: string }>).map((item) => new Date(item.tanggal).getTime())
           const latest = dates.length > 0 ? Math.max(...dates) : null
           return {
             id: student.id,
@@ -64,7 +64,7 @@ export default function DashboardPage() {
   if (loading || !user || dataLoading) return <FullPageLoading label="Memuat dashboard..." />
 
   const totalSiswa = kelasData.reduce((s, k) => s + k.siswa, 0)
-  const observasiMingguIni = kelasData.reduce((s, k) => s + k.observasi, 0)
+  const observasiMingguIni = kelasData.reduce((s, k) => s + k.tracking, 0)
   const firstName = user.nama.split(' ')[0]
 
   return (
@@ -107,7 +107,7 @@ export default function DashboardPage() {
             { label: 'Kelompok pendampingan', value: kelasData.length, icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
             { label: 'Siswa didampingi', value: totalSiswa, icon: UsersRound, color: 'text-secondary', bg: 'bg-secondary-container/40' },
             { label: 'Tujuan PPI aktif', value: activeGoals, icon: FileCheck2, color: 'text-cyan-700', bg: 'bg-cyan-100' },
-            { label: 'Observasi minggu ini', value: observasiMingguIni, icon: ClipboardCheck, color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
+            { label: 'Tracking minggu ini', value: observasiMingguIni, icon: ClipboardCheck, color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-2xl p-4 sm:p-5 border border-outline-variant/20 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl ${s.bg} ${s.color} flex items-center justify-center`}>
@@ -154,8 +154,8 @@ export default function DashboardPage() {
                     <div className="text-xs text-on-surface-variant">siswa didampingi</div>
                   </div>
                   <div className="bg-white/60 rounded-2xl p-3">
-                    <div className="font-bold text-on-surface">{kelas.observasi}</div>
-                    <div className="text-xs text-on-surface-variant">observasi baru</div>
+                    <div className="font-bold text-on-surface">{kelas.tracking}</div>
+                    <div className="text-xs text-on-surface-variant">tracking baru</div>
                   </div>
                 </div>
                 <a href={`/dashboard/kelas/${kelas.id}`} className="flex w-full items-center justify-between py-3 px-4 bg-white/70 hover:bg-white rounded-full font-label-md text-label-md text-on-surface transition-colors">
@@ -172,7 +172,7 @@ export default function DashboardPage() {
               <CalendarCheck className="w-5 h-5" />
             </div>
             <h2 className="font-headline-sm text-headline-sm text-on-surface mb-2">Perlu perhatian</h2>
-            <p className="text-sm text-on-surface-variant mb-4">Siswa yang belum memiliki observasi atau sudah tujuh hari tidak diperbarui.</p>
+            <p className="text-sm text-on-surface-variant mb-4">Siswa yang belum memiliki tracking atau sudah tujuh hari tidak diperbarui.</p>
             <div className="space-y-2">
               {attentionStudents.length === 0 && <p className="rounded-2xl bg-secondary-container/30 p-3 text-sm text-secondary">Tidak ada siswa yang perlu ditindaklanjuti saat ini.</p>}
               {attentionStudents.map((item) => (
@@ -180,7 +180,7 @@ export default function DashboardPage() {
                   <div className="w-9 h-9 rounded-full bg-white text-primary font-bold flex items-center justify-center">{item.nama.charAt(0)}</div>
                   <div className="min-w-0">
                     <div className="text-sm font-bold text-on-surface truncate">{item.nama}</div>
-                    <div className="text-xs text-error">{item.days === null ? 'Belum pernah diobservasi' : `${item.days} hari tanpa observasi`}</div>
+                    <div className="text-xs text-error">{item.days === null ? 'Belum pernah ditracking' : `${item.days} hari tanpa tracking`}</div>
                   </div>
                 </a>
               ))}

@@ -1,212 +1,157 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/auth-context'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CheckCircle2, FileDown, Sparkles } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
-import { Sparkles, Check } from 'lucide-react'
+import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
+import { TRACKING_LEVELS } from '@/lib/ppi-v2-data'
 import { supabase } from '@/lib/supabase'
-import { FullPageLoading } from '@/components/loading-state'
-import { applyObservationScores, normalizeAnalysis, type NormalizedAnalysis } from '@/lib/analysis-normalizer'
-import { observationsToProgress, progressTrend, type ObservationRow } from '@/lib/observation-progress'
 
-export default function RaporSiswaPage({ params }: { params: { id: string } }) {
+type Goal = {
+  id: string
+  area: string
+  tujuan: string
+  target: number
+  jenis_target: 'akademik' | 'non_akademik'
+  fase_adaptasi: string | null
+  kriteria_tuntas: string | null
+}
+
+type Tracking = {
+  tujuan_ppi_id: string
+  tanggal: string
+  kode_bantuan: string
+  benar: number | null
+  total: number | null
+}
+
+type Result = Goal & {
+  value: number
+  recommendation: 'lanjut' | 'remedial'
+  narrative?: string
+}
+
+export default function EvaluasiRaporPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [student, setStudent] = useState<{ nama: string; kategori: string; status_diagnosis: string } | null>(null)
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [tracking, setTracking] = useState<Tracking[]>([])
+  const [team, setTeam] = useState<Array<{ nama: string; peran: string }>>([])
+  const [analysis, setAnalysis] = useState<{ ringkasan_semester: string; rekomendasi_guru: string[]; rekomendasi_orang_tua: string[] } | null>(null)
+  const [narratives, setNarratives] = useState<Record<string, { narrative: string; recommendation: 'lanjut' | 'remedial' }>>({})
+  const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
-  const [student, setStudent] = useState<{ nama: string; kategori: string } | null>(null)
-  const [analisis, setAnalisis] = useState<NormalizedAnalysis | null>(null)
-  const [dataLoading, setDataLoading] = useState(true)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
     if (!user) return
-    Promise.all([
-      supabase.from('siswa').select('nama, kategori').eq('id', params.id).single(),
-      supabase.from('analisis_ai').select('hasil').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('observasi').select('minggu_ke, tanggal, jawaban').eq('siswa_id', params.id).order('minggu_ke'),
-    ]).then(([studentResult, analysisResult, observationsResult]) => {
-      if (studentResult.data) setStudent(studentResult.data)
-      if (analysisResult.data?.hasil && studentResult.data) {
-        const progress = observationsToProgress(
-          (observationsResult.data || []) as ObservationRow[],
-          studentResult.data.kategori,
-        )
-        const latest = progress[progress.length - 1]
-        setAnalisis(applyObservationScores(normalizeAnalysis(analysisResult.data.hasil), latest ? {
-          trend: progressTrend(progress),
-          kognitif: latest.kognitif,
-          fokus: latest.fokus,
-          sosial: latest.sosial,
-          emosi: latest.emosi,
-        } : null))
+    async function load() {
+      const [studentResult, ppiResult, trackingResult, teamResult] = await Promise.all([
+        supabase.from('siswa').select('nama, kategori, status_diagnosis').eq('id', params.id).single(),
+        supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('daily_tracking').select('tujuan_ppi_id, tanggal, kode_bantuan, benar, total').eq('siswa_id', params.id).order('tanggal'),
+        supabase.from('ppi_teams').select('nama, peran').eq('siswa_id', params.id),
+      ])
+      setStudent(studentResult.data)
+      setTracking((trackingResult.data || []) as Tracking[])
+      setTeam(teamResult.data || [])
+      if (ppiResult.data) {
+        const { data } = await supabase.from('tujuan_ppi').select('id, area, tujuan, target, jenis_target, fase_adaptasi, kriteria_tuntas').eq('ppi_id', ppiResult.data.id).order('created_at')
+        setGoals((data || []) as Goal[])
       }
-      setDataLoading(false)
-    })
+      setLoading(false)
+    }
+    void load()
   }, [user, authLoading, router, params.id])
-  if (authLoading || !user || dataLoading) return <FullPageLoading label="Memuat rapor siswa..." />
 
-  async function handleGenerate() {
-    setLoading(true)
+  const results = useMemo<Result[]>(() => goals.map((goal) => {
+    const logs = tracking.filter((item) => item.tujuan_ppi_id === goal.id)
+    let value = 0
+    if (goal.jenis_target === 'akademik') {
+      const byDate = new Map<string, { benar: number; total: number }>()
+      logs.forEach((item) => {
+        if (item.benar !== null && item.total) byDate.set(item.tanggal, { benar: item.benar, total: item.total })
+      })
+      const attempts = Array.from(byDate.values())
+      const correct = attempts.reduce((sum, item) => sum + item.benar, 0)
+      const total = attempts.reduce((sum, item) => sum + item.total, 0)
+      value = total ? Math.round((correct / total) * 100) : 0
+    } else {
+      const scores: number[] = logs.map((item) => Number(TRACKING_LEVELS.find((level) => level.code === item.kode_bantuan)?.score || 0))
+      value = scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : 0
+    }
+    return { ...goal, value, recommendation: value >= goal.target ? 'lanjut' : 'remedial' }
+  }), [goals, tracking])
+
+  if (authLoading || !user || loading) return <FullPageLoading label="Menghitung evaluasi PPI..." />
+
+  async function generate() {
+    if (!student || results.length === 0) return
+    setGenerating(true)
     setError('')
     try {
-      const [{ data: student }, { data: observations }, { data: ppi }] = await Promise.all([
-        supabase.from('siswa').select('nama, kategori, deskripsi_kebutuhan').eq('id', params.id).single(),
-        supabase.from('observasi').select('tanggal, minggu_ke, jawaban, catatan').eq('siswa_id', params.id).order('tanggal'),
-        supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      ])
-      const { data: goals } = ppi
-        ? await supabase.from('tujuan_ppi').select('area, tujuan, indikator, target, capaian, status').eq('ppi_id', ppi.id)
-        : { data: [] }
-      if (!observations || observations.length === 0) {
-        throw new Error('Belum ada observasi yang dapat dianalisis.')
-      }
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'report', student, goals, observations }),
+        body: JSON.stringify({ action: 'evaluation-v2', student, results, team }),
       })
       const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Analisis AI gagal')
-      const normalizedResult = normalizeAnalysis(result)
-      setAnalisis(normalizedResult)
-      await supabase.from('analisis_ai').insert({
-        siswa_id: params.id,
-        periode: new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
-        hasil: normalizedResult,
-        model: 'deepseek-chat',
+      if (!response.ok) throw new Error(result.error || 'Narasi evaluasi belum berhasil dibuat.')
+      setAnalysis({
+        ringkasan_semester: result.ringkasan_semester,
+        rekomendasi_guru: result.rekomendasi_guru || [],
+        rekomendasi_orang_tua: result.rekomendasi_orang_tua || [],
       })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analisis AI gagal')
+      const map: Record<string, { narrative: string; recommendation: 'lanjut' | 'remedial' }> = {}
+      for (const item of result.evaluasi_target || []) map[item.tujuan_id] = { narrative: item.narasi, recommendation: item.rekomendasi }
+      setNarratives(map)
+      const period = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+      await supabase.from('evaluations').delete().eq('siswa_id', params.id).eq('periode', period)
+      await supabase.from('evaluations').insert(results.map((item) => ({
+        siswa_id: params.id,
+        tujuan_ppi_id: item.id,
+        periode: period,
+        jenis_target: item.jenis_target,
+        nilai_angka: item.jenis_target === 'akademik' ? item.value : null,
+        ketercapaian: item.value,
+        narasi: map[item.id]?.narrative || 'Narasi belum tersedia.',
+        rekomendasi: map[item.id]?.recommendation || item.recommendation,
+        model: 'deepseek-chat',
+      })))
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Narasi evaluasi belum berhasil dibuat.')
     } finally {
-      setLoading(false)
+      setGenerating(false)
     }
   }
-  async function handleCopyNarasi() {
-    if (!analisis) return
-    await navigator.clipboard.writeText(analisis.rapor_narasi)
-    alert('Narasi rapor berhasil disalin!')
-  }
 
-  return (
-    <div className="min-h-screen bg-[#FAFAF5]">
-      <header className="app-header">
-        <nav className="app-nav">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-            <a href={`/dashboard/siswa/${params.id}`} className="shrink-0 text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md">← <span className="hidden min-[390px]:inline">Profil</span></a>
-            <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact mobileIconOnly /></a>
-          </div>
-        </nav>
-      </header>
+  return <div className="min-h-screen bg-[#FAFAF5] print:bg-white">
+    <header className="app-header print:hidden"><nav className="app-nav"><a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant">← Profil</a><BrandLogo compact mobileIconOnly /></nav></header>
+    <main className="mx-auto max-w-4xl px-4 pb-20 pt-24 sm:pt-28 print:pt-0">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div><div className="text-xs font-bold text-primary">EVALUASI PROGRAM PEMBELAJARAN INDIVIDUAL</div><h1 className="mt-1 text-3xl font-bold">{student?.nama}</h1><p className="mt-1 text-on-surface-variant">Periode {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</p></div>
+        <div className="flex gap-2 print:hidden"><button onClick={generate} disabled={generating || tracking.length === 0} className="rounded-full bg-primary px-5 py-3 font-bold text-white disabled:opacity-40">{generating ? <LoadingSpinner label="Menyusun..." /> : <><Sparkles className="mr-2 inline h-4 w-4" />Buat narasi</>}</button><button onClick={() => window.print()} className="rounded-full bg-surface-container-high px-5 py-3 font-bold"><FileDown className="mr-2 inline h-4 w-4" />Cetak / PDF</button></div>
+      </div>
+      {error && <div className="mt-4 rounded-2xl bg-error-container p-4 text-sm text-error">{error}</div>}
+      {tracking.length === 0 && <div className="mt-6 rounded-3xl border-2 border-dashed bg-white p-8 text-center"><h2 className="font-bold">Belum ada tracking harian</h2><p className="mt-1 text-sm text-on-surface-variant">Nilai dan evaluasi akan muncul setelah guru mencatat pelaksanaan target.</p></div>}
 
-      <main className="pt-24 sm:pt-28 max-w-3xl mx-auto px-4 sm:px-gutter pb-xl">
-        <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
-          <h2 className="font-headline-sm text-headline-sm text-on-surface">Rapor {student?.nama || 'Siswa'}</h2>
-          {student?.kategori && <span className="text-xs text-primary bg-primary-container/30 px-3 py-1 rounded-full font-label-sm">{student.kategori.replaceAll('_', ' ')}</span>}
-        </div>
-        <p className="text-on-surface-variant font-body-md text-body-md mb-lg">Periode: {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</p>
+      <div className="mt-6 space-y-4">
+        {results.map((item) => <section key={item.id} className="rounded-3xl border bg-white p-5 sm:p-6">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><div className="text-xs font-bold text-primary">{item.area}{item.fase_adaptasi ? ` · CP Fase ${item.fase_adaptasi}` : ''}</div><h2 className="mt-1 text-lg font-bold">{item.tujuan}</h2><p className="mt-2 text-xs text-on-surface-variant">{item.kriteria_tuntas}</p></div><div className="shrink-0 text-left sm:text-right"><div className="text-4xl font-bold">{item.value}{item.jenis_target === 'non_akademik' ? '%' : ''}</div><div className="text-xs text-on-surface-variant">{item.jenis_target === 'akademik' ? 'Nilai berdasarkan benar/total' : 'Ketercapaian target'}</div></div></div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full bg-primary" style={{ width: `${item.value}%` }} /></div>
+          <div className={`mt-4 inline-flex rounded-full px-3 py-1.5 text-xs font-bold ${item.value >= item.target ? 'bg-secondary-container/40 text-secondary' : 'bg-tertiary-fixed/40 text-tertiary'}`}>{item.value >= item.target ? 'Lanjut / pengayaan' : 'Ulang / remedial'}</div>
+          {narratives[item.id] && <p className="mt-4 leading-relaxed">{narratives[item.id].narrative}</p>}
+        </section>)}
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-lg">
-          <button onClick={handleGenerate} disabled={loading}
-            className="w-full px-6 py-3 rounded-full bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary font-label-md text-label-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
-          >
-            {loading ? 'Menganalisis...' : 'Generate Analisis AI'}
-          </button>
-          <button onClick={handleCopyNarasi} disabled={!analisis} className="w-full px-6 py-3 rounded-full bg-surface-container-high text-on-surface font-label-md disabled:opacity-40">Salin Narasi</button>
-        </div>
-        {error && <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container mb-md">{error}</div>}
-
-        {!analisis ? (
-          <div className="rounded-3xl border-2 border-dashed border-outline-variant/40 bg-white p-8 text-center">
-            <h3 className="font-bold text-lg">Belum ada analisis rapor</h3>
-            <p className="text-sm text-on-surface-variant mt-1">Klik “Generate Analisis AI” setelah data observasi tersedia.</p>
-          </div>
-        ) : <div className="space-y-lg">
-          {/* Nilai */}
-          <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">
-            <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md">Nilai Angka</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {[
-                { label: 'Kognitif', value: analisis.nilai_kognitif, color: 'text-primary' },
-                { label: 'Fokus', value: analisis.nilai_fokus, color: 'text-cyan-700' },
-                { label: 'Sosial', value: analisis.nilai_sosial, color: 'text-on-secondary-container' },
-                { label: 'Emosional', value: analisis.nilai_emosional, color: 'text-tertiary' },
-                { label: 'Rata-rata', value: analisis.nilai_rata_rata, color: 'text-on-surface' },
-              ].map((item) => (
-                <div key={item.label} className="text-center p-4 bg-surface-container-low rounded-xl">
-                  <div className={`font-display text-display-lg-mobile font-bold ${item.color}`}>{item.value}</div>
-                  <div className="text-on-surface-variant font-label-md text-label-md mt-1">{item.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Trend */}
-          <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">
-            <div className="flex items-center justify-between">
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">Tren Perkembangan</h3>
-              <span className="text-sm text-on-secondary-container bg-secondary-container/40 px-4 py-2 rounded-full font-label-md">{analisis.trend === 'membaik' ? '↑ Membaik' : analisis.trend === 'menurun' ? '↓ Menurun' : '→ Stabil'}</span>
-            </div>
-          </div>
-
-          {/* Highlights */}
-          <div className="bg-pastel-green rounded-xl p-lg border border-secondary/10 hard-shadow">
-            <h3 className="font-headline-sm text-headline-sm text-on-secondary-container mb-3 flex items-center gap-2">
-              <Sparkles className="w-5 h-5" /> Highlights
-            </h3>
-            <ul className="space-y-2">
-              {analisis.highlights.map((h, i) => (
-                <li key={i} className="text-on-surface font-body-md text-body-md flex items-start gap-2">
-                  <Check className="w-4 h-4 text-on-secondary-container shrink-0 mt-0.5" /> {h}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Concerns */}
-          <div className="bg-pastel-yellow rounded-xl p-lg border border-tertiary/10 hard-shadow">
-            <h3 className="font-headline-sm text-headline-sm text-tertiary mb-3">Area Perhatian</h3>
-            <ul className="space-y-2">
-              {analisis.concerns.map((c, i) => (
-                <li key={i} className="text-on-surface font-body-md text-body-md flex items-start gap-2">
-                  <span className="text-tertiary shrink-0 mt-0.5 font-bold">!</span> {c}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Narasi */}
-          <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">
-            <h3 className="font-headline-sm text-headline-sm text-on-surface mb-3">Narasi Rapor</h3>
-            <p className="text-on-surface font-body-md text-body-md leading-relaxed whitespace-pre-line">{analisis.rapor_narasi}</p>
-          </div>
-
-          {/* Rekomendasi Guru */}
-          <div className="bg-pastel-purple rounded-xl p-lg border border-primary/10 hard-shadow">
-            <h3 className="font-headline-sm text-headline-sm text-primary mb-3">Rekomendasi Guru</h3>
-            <ul className="space-y-2">
-              {analisis.rekomendasi_guru.map((r, i) => (
-                <li key={i} className="text-on-surface font-body-md text-body-md flex items-start gap-2">
-                  <span className="text-primary shrink-0">→</span> {r}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Rekomendasi Ortu */}
-          <div className="bg-surface rounded-xl p-lg border border-outline-variant/20 hard-shadow">
-            <h3 className="font-headline-sm text-headline-sm text-on-surface mb-3">Rekomendasi untuk Orang Tua</h3>
-            <ul className="space-y-2">
-              {analisis.rekomendasi_ortu.map((r, i) => (
-                <li key={i} className="text-on-surface font-body-md text-body-md flex items-start gap-2">
-                  <span className="text-primary shrink-0">→</span> {r}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>}
-      </main>
-    </div>
-  )
+      {analysis && <div className="mt-6 space-y-4">
+        <section className="rounded-3xl bg-primary/5 p-5 sm:p-6"><h2 className="font-bold">Ringkasan perkembangan</h2><p className="mt-3 leading-relaxed">{analysis.ringkasan_semester}</p></section>
+        <div className="grid gap-4 md:grid-cols-2"><section className="rounded-3xl bg-[#E4F8EE] p-5"><h2 className="font-bold">Rekomendasi guru</h2><ul className="mt-3 space-y-2 text-sm">{analysis.rekomendasi_guru.map((item) => <li key={item} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />{item}</li>)}</ul></section><section className="rounded-3xl bg-tertiary-fixed/30 p-5"><h2 className="font-bold">Rekomendasi orang tua</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{analysis.rekomendasi_orang_tua.map((item) => <li key={item}>{item}</li>)}</ul></section></div>
+      </div>}
+    </main>
+  </div>
 }
