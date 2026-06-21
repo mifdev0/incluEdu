@@ -133,9 +133,27 @@ Hasil checklist asesmen: ${JSON.stringify(body.assessment)}
 Kembalikan JSON berisi 3-6 kekuatan, 3-6 kebutuhan, ringkasan maksimal 3 kalimat, dan saran_referral singkat bila perlu. Jangan membuat kemampuan yang tidak tercatat.`,
         1600,
       )
+      const assessmentRows = Array.isArray(body.assessment) ? body.assessment : []
+      const fallbackStrengths = assessmentRows
+        .filter((item: Record<string, unknown>) => item.hasil === 'mandiri' || item.hasil === 'kadang')
+        .map((item: Record<string, unknown>) => String(item.kemampuan || ''))
+        .filter(Boolean)
+        .slice(0, 6)
+      const fallbackNeeds = assessmentRows
+        .filter((item: Record<string, unknown>) => item.hasil === 'butuh_bantuan' || item.hasil === 'belum_bisa')
+        .map((item: Record<string, unknown>) => {
+          const ability = String(item.kemampuan || '')
+          return item.hasil === 'belum_bisa'
+            ? `Perlu pembelajaran bertahap untuk ${ability.toLowerCase()}`
+            : `Perlu bantuan dalam ${ability.toLowerCase()}`
+        })
+        .filter(Boolean)
+        .slice(0, 6)
+      const strengths = Array.isArray(result.kekuatan) ? result.kekuatan.map(String).filter(Boolean).slice(0, 6) : []
+      const needs = Array.isArray(result.kebutuhan) ? result.kebutuhan.map(String).filter(Boolean).slice(0, 6) : []
       return NextResponse.json({
-        kekuatan: Array.isArray(result.kekuatan) ? result.kekuatan.map(String).slice(0, 6) : [],
-        kebutuhan: Array.isArray(result.kebutuhan) ? result.kebutuhan.map(String).slice(0, 6) : [],
+        kekuatan: strengths.length > 0 ? strengths : fallbackStrengths,
+        kebutuhan: needs.length > 0 ? needs : fallbackNeeds,
         ringkasan: String(result.ringkasan || ''),
         saran_referral: String(result.saran_referral || ''),
       })

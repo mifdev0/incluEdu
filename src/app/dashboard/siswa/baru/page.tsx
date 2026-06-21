@@ -105,7 +105,21 @@ export default function TambahSiswaPage() {
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Ringkasan asesmen belum berhasil.')
-      setSummary(result)
+      const fallbackStrengths = responses
+        .filter((item) => item.hasil === 'mandiri' || item.hasil === 'kadang')
+        .map((item) => item.kemampuan)
+        .slice(0, 6)
+      const fallbackNeeds = responses
+        .filter((item) => item.hasil === 'butuh_bantuan' || item.hasil === 'belum_bisa')
+        .map((item) => item.hasil === 'belum_bisa'
+          ? `Perlu pembelajaran bertahap untuk ${item.kemampuan.toLowerCase()}`
+          : `Perlu bantuan dalam ${item.kemampuan.toLowerCase()}`)
+        .slice(0, 6)
+      setSummary({
+        ...result,
+        kekuatan: Array.isArray(result.kekuatan) && result.kekuatan.length > 0 ? result.kekuatan : fallbackStrengths,
+        kebutuhan: Array.isArray(result.kebutuhan) && result.kebutuhan.length > 0 ? result.kebutuhan : fallbackNeeds,
+      })
       setStep(3)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Ringkasan asesmen belum berhasil.')
