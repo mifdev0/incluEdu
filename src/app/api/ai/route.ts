@@ -36,6 +36,10 @@ Kembalikan JSON dengan kategori, keyakinan, alasan singkat, 2-4 pertanyaan_lanju
         tujuan_jangka_panjang: string
         tujuan_jangka_pendek: Array<{
           area: string
+          jenis_target: 'akademik' | 'non_akademik'
+          mata_pelajaran: string
+          fase_adaptasi: string
+          elemen_cp: string
           tujuan: string
           indikator: string
           target: number
@@ -52,7 +56,8 @@ Kembalikan JSON dengan kategori, keyakinan, alasan singkat, 2-4 pertanyaan_lanju
         `Profil siswa: ${JSON.stringify(body.student)}
 Asesmen awal: ${JSON.stringify(body.baseline)}
 Susun satu tujuan jangka panjang, 2-4 tujuan jangka pendek, dan strategi pembelajaran.
-Setiap tujuan jangka pendek wajib memuat: area, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati.`
+Untuk target akademik, ikuti rekomendasi fase kemampuan pada input meskipun berbeda dari fase kelas administratif.
+Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akademik), mata_pelajaran, fase_adaptasi, elemen_cp, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati.`
       )
       const goals = (Array.isArray(result.tujuan_jangka_pendek) ? result.tujuan_jangka_pendek : [])
         .map((goal) => {
@@ -61,6 +66,10 @@ Setiap tujuan jangka pendek wajib memuat: area, tujuan, indikator terukur, targe
           const generatedSteps = Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas.map(String).filter(Boolean).slice(0, 6) : []
           return {
             area: String(goal.area || 'Kebutuhan belajar'),
+            jenis_target: goal.jenis_target === 'akademik' ? 'akademik' : 'non_akademik',
+            mata_pelajaran: String(goal.mata_pelajaran || ''),
+            fase_adaptasi: String(goal.fase_adaptasi || ''),
+            elemen_cp: String(goal.elemen_cp || ''),
             tujuan,
             indikator: indikator || tujuan,
             target: Math.min(100, Math.max(0, Number(goal.target) || 70)),

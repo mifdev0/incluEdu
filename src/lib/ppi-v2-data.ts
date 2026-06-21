@@ -7,6 +7,14 @@ export const ASSESSMENT_SCALE = [
 
 export type AssessmentValue = typeof ASSESSMENT_SCALE[number]['value']
 
+export type PhaseRecommendation = {
+  area: 'Membaca' | 'Menulis' | 'Matematika'
+  mata_pelajaran: 'Bahasa Indonesia' | 'Matematika'
+  elemen: string
+  fase: 'A' | 'B' | 'C'
+  alasan: string
+}
+
 export type AssessmentItem = {
   key: string
   domain: 'akademik' | 'sikap_belajar' | 'sosial_emosional' | 'adl' | 'motorik_kasar' | 'motorik_halus'
@@ -59,3 +67,85 @@ export const TRACKING_LEVELS = [
   { code: 'Bv', label: 'Bantuan verbal', description: 'Memerlukan instruksi lisan berulang', score: 40 },
   { code: 'Bf', label: 'Bantuan fisik', description: 'Memerlukan bimbingan fisik langsung', score: 20 },
 ] as const
+
+const abilityRank: Record<AssessmentValue, number> = {
+  mandiri: 3,
+  kadang: 2,
+  butuh_bantuan: 1,
+  belum_bisa: 0,
+}
+
+export function recommendCurriculumPhases(assessment: Record<string, AssessmentValue>): PhaseRecommendation[] {
+  const readingSentence = abilityRank[assessment.membaca_kalimat] ?? 0
+  const writingIndependent = abilityRank[assessment.menulis_mandiri] ?? 0
+  const basicOperation = abilityRank[assessment.berhitung_operasi] ?? 0
+  const advancedNumber = abilityRank[assessment.berhitung_lanjut] ?? 0
+
+  return [
+    readingSentence >= 2
+      ? {
+          area: 'Membaca',
+          mata_pelajaran: 'Bahasa Indonesia',
+          elemen: 'Membaca dan Memirsa',
+          fase: 'B',
+          alasan: 'Siswa sudah cukup mampu membaca dan memahami kalimat pendek, sehingga dapat mulai menggunakan target membaca Fase B.',
+        }
+      : {
+          area: 'Membaca',
+          mata_pelajaran: 'Bahasa Indonesia',
+          elemen: 'Membaca dan Memirsa',
+          fase: 'A',
+          alasan: 'Kemampuan membaca huruf, suku kata, atau kalimat pendek masih perlu dikuatkan melalui target Fase A.',
+        },
+    writingIndependent >= 2
+      ? {
+          area: 'Menulis',
+          mata_pelajaran: 'Bahasa Indonesia',
+          elemen: 'Menulis',
+          fase: 'B',
+          alasan: 'Siswa sudah mulai menulis gagasan sederhana, sehingga target menulis dapat diarahkan ke Fase B.',
+        }
+      : {
+          area: 'Menulis',
+          mata_pelajaran: 'Bahasa Indonesia',
+          elemen: 'Menulis',
+          fase: 'A',
+          alasan: 'Kemampuan memegang alat tulis, menyalin, atau menulis mandiri masih perlu dikuatkan melalui target Fase A.',
+        },
+    advancedNumber >= 2
+      ? {
+          area: 'Matematika',
+          mata_pelajaran: 'Matematika',
+          elemen: 'Bilangan',
+          fase: 'C',
+          alasan: 'Siswa sudah cukup mampu menggunakan bilangan ratusan atau ribuan sehingga dapat menggunakan target Fase C.',
+        }
+      : basicOperation >= 2
+        ? {
+            area: 'Matematika',
+            mata_pelajaran: 'Matematika',
+            elemen: 'Bilangan',
+            fase: 'B',
+            alasan: 'Siswa sudah cukup mampu melakukan operasi hitung dasar sehingga dapat menggunakan target Fase B.',
+          }
+        : {
+            area: 'Matematika',
+            mata_pelajaran: 'Matematika',
+            elemen: 'Bilangan',
+            fase: 'A',
+            alasan: 'Pengenalan angka dan operasi hitung dasar masih perlu dikuatkan melalui target Fase A.',
+          },
+  ]
+}
+
+export function expectedPhaseFromClass(className: string, level: string) {
+  const number = Number(className.match(/\d+/)?.[0])
+  if (level === 'SD') {
+    if (number >= 5) return 'C'
+    if (number >= 3) return 'B'
+    return 'A'
+  }
+  if (level === 'SMP') return 'D'
+  if (level === 'SMA') return number >= 11 ? 'F' : 'E'
+  return null
+}

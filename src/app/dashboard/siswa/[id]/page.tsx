@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
 import { FullPageLoading } from '@/components/loading-state'
 import { supabase } from '@/lib/supabase'
+import type { PhaseRecommendation } from '@/lib/ppi-v2-data'
 
 type Student = {
   nama: string
@@ -36,7 +37,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const [goals, setGoals] = useState<Goal[]>([])
   const [teamCount, setTeamCount] = useState(0)
   const [trackingDays, setTrackingDays] = useState(0)
-  const [summary, setSummary] = useState<{ kekuatan: string[]; kebutuhan: string[]; ringkasan: string } | null>(null)
+  const [summary, setSummary] = useState<{ kekuatan: string[]; kebutuhan: string[]; ringkasan: string; rekomendasi_fase: PhaseRecommendation[] } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
         supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('ppi_teams').select('id', { count: 'exact', head: true }).eq('siswa_id', params.id),
         supabase.from('daily_tracking').select('tanggal').eq('siswa_id', params.id),
-        supabase.from('assessment_summaries').select('kekuatan, kebutuhan, ringkasan').eq('siswa_id', params.id).maybeSingle(),
+        supabase.from('assessment_summaries').select('kekuatan, kebutuhan, ringkasan, rekomendasi_fase').eq('siswa_id', params.id).maybeSingle(),
       ])
       setStudent(studentResult.data as Student)
       setTeamCount(teamResult.count || 0)
@@ -91,6 +92,18 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
       {summary && <section className="mt-4 grid gap-3 md:grid-cols-2">
         <div className="rounded-3xl bg-[#E4F8EE] p-5"><h2 className="font-bold">Kekuatan siswa</h2><ul className="mt-3 list-disc space-y-1 pl-5 text-sm">{summary.kekuatan.map((item) => <li key={item}>{item}</li>)}</ul></div>
         <div className="rounded-3xl bg-tertiary-fixed/30 p-5"><h2 className="font-bold">Kebutuhan dukungan</h2><ul className="mt-3 list-disc space-y-1 pl-5 text-sm">{summary.kebutuhan.map((item) => <li key={item}>{item}</li>)}</ul></div>
+      </section>}
+
+      {Boolean(summary?.rekomendasi_fase?.length) && <section className="mt-4 rounded-3xl border border-primary/15 bg-white p-5 sm:p-6">
+        <div className="text-xs font-bold text-primary">PENYESUAIAN CAPAIAN PEMBELAJARAN</div>
+        <h2 className="mt-1 text-xl font-bold">Fase kemampuan yang digunakan</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">Fase ditentukan per area berdasarkan asesmen awal, bukan semata-mata berdasarkan kelas siswa.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {summary?.rekomendasi_fase?.map((item) => <div key={item.area} className="rounded-2xl bg-primary/5 p-4">
+            <div className="flex items-center justify-between gap-2"><span className="font-bold">{item.area}</span><span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">Fase {item.fase}</span></div>
+            <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">{item.alasan}</p>
+          </div>)}
+        </div>
       </section>}
 
       <section className="mt-4 rounded-3xl border bg-white p-5 sm:p-6">

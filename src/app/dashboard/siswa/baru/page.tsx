@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
 import { supabase } from '@/lib/supabase'
-import { ASSESSMENT_ITEMS, ASSESSMENT_SCALE, TEAM_ROLES, type AssessmentValue } from '@/lib/ppi-v2-data'
+import { ASSESSMENT_ITEMS, ASSESSMENT_SCALE, TEAM_ROLES, expectedPhaseFromClass, recommendCurriculumPhases, type AssessmentValue, type PhaseRecommendation } from '@/lib/ppi-v2-data'
 
 const categories = [
   ['slow_learner', 'Slow Learner'],
@@ -28,6 +28,7 @@ type AiSummary = {
   kebutuhan: string[]
   ringkasan: string
   saran_referral: string
+  rekomendasi_fase: PhaseRecommendation[]
 }
 
 export default function TambahSiswaPage() {
@@ -60,6 +61,9 @@ export default function TambahSiswaPage() {
   const requiredTeamComplete = ['guru_kelas', 'orang_tua', 'kepala_sekolah'].every((role) => team[role]?.trim())
   const identityComplete = nama.trim() && kelasId && kategori && requiredTeamComplete
   const assessmentComplete = ASSESSMENT_ITEMS.every((item) => assessment[item.key])
+  const phaseRecommendations = recommendCurriculumPhases(assessment)
+  const selectedClass = classes.find((item) => item.id === kelasId)
+  const expectedPhase = selectedClass ? expectedPhaseFromClass(selectedClass.nama, selectedClass.jenjang) : null
 
   if (loading || !user) return <FullPageLoading label="Menyiapkan formulir PPI..." />
 
@@ -119,6 +123,7 @@ export default function TambahSiswaPage() {
         ...result,
         kekuatan: Array.isArray(result.kekuatan) && result.kekuatan.length > 0 ? result.kekuatan : fallbackStrengths,
         kebutuhan: Array.isArray(result.kebutuhan) && result.kebutuhan.length > 0 ? result.kebutuhan : fallbackNeeds,
+        rekomendasi_fase: phaseRecommendations,
       })
       setStep(3)
     } catch (reason) {
@@ -195,6 +200,7 @@ export default function TambahSiswaPage() {
           kebutuhan: summary.kebutuhan,
           ringkasan: summary.ringkasan,
           model: 'deepseek-chat',
+          rekomendasi_fase: summary.rekomendasi_fase,
         }),
       ])
       if (teamResult.error) throw teamResult.error
@@ -207,7 +213,7 @@ export default function TambahSiswaPage() {
         body: JSON.stringify({
           action: 'ppi',
           student: { nama, kategori, status_diagnosis: statusDiagnosis, deskripsi: description },
-          baseline: { assessment: assessmentRows, kekuatan: summary.kekuatan, kebutuhan: summary.kebutuhan },
+          baseline: { assessment: assessmentRows, kekuatan: summary.kekuatan, kebutuhan: summary.kebutuhan, rekomendasi_fase: summary.rekomendasi_fase },
         }),
       })
       const draft = await ppiResponse.json()
@@ -227,21 +233,41 @@ export default function TambahSiswaPage() {
       }).select('id').single()
       if (ppiError || !ppi) throw ppiError || new Error('PPI gagal dibuat.')
 
-      const goals = (draft.tujuan_jangka_pendek || []).map((goal: Record<string, unknown>) => ({
-        ppi_id: ppi.id,
-        area: String(goal.area || 'Kebutuhan individual'),
-        tujuan: String(goal.tujuan || ''),
-        indikator: String(goal.indikator || goal.tujuan || ''),
-        target: Math.min(100, Math.max(1, Number(goal.target) || 80)),
-        aktivitas: String(goal.aktivitas || ''),
-        media_alat: String(goal.media_alat || ''),
-        pelaksana: String(goal.pelaksana || 'Guru kelas'),
-        frekuensi: String(goal.frekuensi || ''),
-        metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
-        langkah_tugas: Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas : [],
-        jenis_target: ['membaca', 'menulis', 'matematika', 'berhitung'].some((term) => String(goal.area || '').toLowerCase().includes(term)) ? 'akademik' : 'non_akademik',
-        kriteria_tuntas: `Tuntas apabila mencapai minimal ${Number(goal.target) || 80}%`,
-      })).filter((goal: { tujuan: string }) => goal.tujuan)
+      const { data: cpRows } = await supabase.from('curriculum_cp').select('id, mata_pelajaran, fase, nama_elemen')
+      const goals = (draft.tujuan_jangka_pendek || []).map((goal: Record<string, unknown>) => {
+        const area = String(goal.area || 'Kebutuhan individual')
+        const academic = goal.jenis_target === 'akademik'
+          || ['membaca', 'menulis', 'matematika', 'berhitung'].some((term) => area.toLowerCase().includes(term))
+        const phaseFallback = summary.rekomendasi_fase.find((item) =>
+          area.toLowerCase().includes(item.area.toLowerCase())
+          || String(goal.mata_pelajaran || '').toLowerCase() === item.mata_pelajaran.toLowerCase()
+        )
+        const phase = academic ? String(goal.fase_adaptasi || phaseFallback?.fase || '') : ''
+        const subject = String(goal.mata_pelajaran || phaseFallback?.mata_pelajaran || '')
+        const element = String(goal.elemen_cp || phaseFallback?.elemen || '')
+        const cp = (cpRows || []).find((item) =>
+          item.mata_pelajaran.toLowerCase() === subject.toLowerCase()
+          && item.fase === phase
+          && (!element || item.nama_elemen.toLowerCase().includes(element.toLowerCase()) || element.toLowerCase().includes(item.nama_elemen.toLowerCase()))
+        )
+        return {
+          ppi_id: ppi.id,
+          area,
+          tujuan: String(goal.tujuan || ''),
+          indikator: String(goal.indikator || goal.tujuan || ''),
+          target: Math.min(100, Math.max(1, Number(goal.target) || 80)),
+          aktivitas: String(goal.aktivitas || ''),
+          media_alat: String(goal.media_alat || ''),
+          pelaksana: String(goal.pelaksana || 'Guru kelas'),
+          frekuensi: String(goal.frekuensi || ''),
+          metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
+          langkah_tugas: Array.isArray(goal.langkah_tugas) ? goal.langkah_tugas : [],
+          jenis_target: academic ? 'akademik' : 'non_akademik',
+          cp_id: cp?.id || null,
+          fase_adaptasi: phase || null,
+          kriteria_tuntas: `Tuntas apabila mencapai minimal ${Number(goal.target) || 80}%`,
+        }
+      }).filter((goal: { tujuan: string }) => goal.tujuan)
       const { data: savedGoals, error: goalsError } = await supabase.from('tujuan_ppi').insert(goals).select('id, media_alat, frekuensi, aktivitas')
       if (goalsError) throw goalsError
       const accommodationRows = (savedGoals || []).flatMap((goal) => [
@@ -326,6 +352,25 @@ export default function TambahSiswaPage() {
             <section className="rounded-3xl border border-secondary/15 bg-[#E4F8EE] p-5"><h2 className="font-bold">Kekuatan</h2><ul className="mt-3 space-y-2 text-sm">{summary.kekuatan.map((item) => <li key={item} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />{item}</li>)}</ul></section>
             <section className="rounded-3xl border border-tertiary/15 bg-tertiary-fixed/25 p-5"><h2 className="font-bold">Kebutuhan dukungan</h2><ul className="mt-3 space-y-2 text-sm">{summary.kebutuhan.map((item) => <li key={item} className="flex gap-2"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-tertiary" />{item}</li>)}</ul></section>
           </div>
+          <section className="rounded-3xl border border-primary/15 bg-white p-5 sm:p-6">
+            <div className="text-xs font-bold text-primary">REKOMENDASI ADAPTASI CP</div>
+            <h2 className="mt-1 text-lg font-bold">Fase kemampuan awal yang disarankan</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              {expectedPhase ? `Fase kelas administratif diperkirakan ${expectedPhase}. ` : ''}
+              Setiap area dapat menggunakan fase berbeda sesuai kemampuan aktual siswa.
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {summary.rekomendasi_fase.map((item) => {
+                const adapted = expectedPhase && expectedPhase !== item.fase
+                return <div key={item.area} className="rounded-2xl bg-surface-container-low p-4">
+                  <div className="flex items-center justify-between gap-2"><span className="font-bold">{item.area}</span><span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">Fase {item.fase}</span></div>
+                  <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">{item.alasan}</p>
+                  {adapted && <div className="mt-3 text-xs font-bold text-tertiary">Adaptasi dari fase kelas {expectedPhase} ke Fase {item.fase}</div>}
+                </div>
+              })}
+            </div>
+            <p className="mt-4 text-xs text-on-surface-variant">Rekomendasi ini menjadi dasar draf tujuan akademik. Guru tetap dapat mengganti CP pada halaman PPI.</p>
+          </section>
           {summary.saran_referral && <section className="rounded-3xl border border-outline-variant/20 bg-white p-5"><div className="text-xs font-bold text-primary">SARAN REFERRAL</div><p className="mt-2 text-sm text-on-surface-variant">{summary.saran_referral}</p></section>}
           <div className="grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setStep(2)} className="rounded-full bg-surface-container-high py-4 font-bold">Perbaiki asesmen</button><button type="button" disabled={saving} onClick={save} className="rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{saving ? <LoadingSpinner label="Menyusun PPI..." /> : 'Simpan dan susun draf PPI'}</button></div>
         </div>}
