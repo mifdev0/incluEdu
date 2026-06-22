@@ -215,7 +215,7 @@ Jika data menunjukkan stagnasi terutama tetap pada Bf selama sekitar dua minggu,
 Hasil target yang telah dihitung sistem: ${JSON.stringify(body.results)}
 Tim PPI: ${JSON.stringify(body.team)}
 
-Kembalikan JSON: ringkasan_semester, evaluasi_target (tujuan_id harus sama dengan input, narasi, rekomendasi lanjut/remedial), rekomendasi_guru, dan rekomendasi_orang_tua.`,
+Kembalikan JSON: ringkasan_semester (paragraf), evaluasi_target (tujuan_id harus sama dengan input, narasi, rekomendasi lanjut/remedial), rekomendasi_guru (minimal 3 butir saran untuk guru), dan rekomendasi_orang_tua (minimal 3 butir saran untuk orang tua).`,
         2400,
       )
       return NextResponse.json({
