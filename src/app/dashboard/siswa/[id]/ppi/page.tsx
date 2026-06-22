@@ -196,8 +196,8 @@ export default function PpiPage({ params }: { params: { id: string } }) {
     const tujuan = goalForm.tujuan.trim()
     const indikator = goalForm.indikator.trim()
     const taskSteps = goalForm.langkah_tugas.map((item) => item.trim()).filter(Boolean)
-    if (!area || !tujuan || !indikator || !goalForm.aktivitas.trim() || !goalForm.metode_evaluasi.trim() || taskSteps.length === 0) {
-      setGoalError('Area, tujuan, indikator, aktivitas, metode evaluasi, dan minimal satu langkah tugas wajib diisi.')
+    if (!area || !tujuan || !indikator || taskSteps.length === 0) {
+      setGoalError('Area, tujuan, indikator, dan minimal satu langkah tugas wajib diisi.')
       return
     }
 
@@ -207,11 +207,11 @@ export default function PpiPage({ params }: { params: { id: string } }) {
       tujuan,
       indikator,
       target: goalForm.target,
-      aktivitas: goalForm.aktivitas.trim(),
+      aktivitas: goalForm.aktivitas.trim() || null,
       media_alat: goalForm.media_alat.trim() || null,
       pelaksana: goalForm.pelaksana.trim() || 'Guru kelas',
       frekuensi: goalForm.frekuensi.trim() || null,
-      metode_evaluasi: goalForm.metode_evaluasi.trim(),
+      metode_evaluasi: goalForm.metode_evaluasi.trim() || 'Observasi kinerja',
       langkah_tugas: taskSteps,
       updated_at: new Date().toISOString(),
       jenis_target: goalForm.jenis_target,
@@ -317,6 +317,18 @@ export default function PpiPage({ params }: { params: { id: string } }) {
     setAddingNonAcademic(false)
   }
 
+  async function markGoalComplete(goal: PpiGoal) {
+    if (!confirm(`Tandai "${goal.tujuan}" sebagai tercapai?\n\nGoal ini akan dikunci dan guru bisa membuat tujuan pengayaan baru.`)) return
+    const { error } = await supabase.from('tujuan_ppi').update({
+      status: 'tercapai',
+      capaian: Math.max(goal.capaian, goal.target),
+      updated_at: new Date().toISOString(),
+    }).eq('id', goal.id)
+    if (!error) {
+      setGoals((current) => current.map((item) => item.id === goal.id ? { ...item, status: 'tercapai', capaian: Math.max(goal.capaian, goal.target) } : item))
+    }
+  }
+
   async function approvePpi() {
     if (!ppiId || !approverName.trim()) {
       setGoalError('Nama orang tua atau wali yang menyetujui wajib diisi.')
@@ -365,7 +377,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             </div>
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
               <a href={`/dashboard/siswa/${params.id}/ppi/dokumen`} className="inline-flex items-center justify-center rounded-full bg-white/15 px-5 py-3 font-bold text-white"><FileDown className="mr-2 h-4 w-4" />Dokumen PPI</a>
-              <button type="button" onClick={openNewGoal} disabled={!hasPpi || ppiStatus === 'aktif'} className="px-5 py-3 rounded-full bg-white text-primary font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50"><Plus className="w-4 h-4" /> Tambah tujuan</button>
+              <button type="button" onClick={openNewGoal} disabled={!hasPpi} className="px-5 py-3 rounded-full bg-white text-primary font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50"><Plus className="w-4 h-4" /> Tambah tujuan</button>
             </div>
           </div>
         </section>
@@ -485,16 +497,31 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                     <p className="mt-1 text-sm font-semibold">{goal.kriteria_tuntas || `Tuntas apabila mencapai ${goal.target}%`}</p>
                     {goal.jenis_target === 'akademik' && <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">Hasil tracking menjadi rekomendasi penilaian untuk {identity.subject || 'mata pelajaran terkait'}. Nilai akhir tetap ditinjau dan disahkan oleh guru.</p>}
                   </div>
-                  <button type="button" onClick={() => openEditGoal(goal)} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-primary">
-                    <Pencil className="w-4 h-4" /> Evaluasi atau revisi tujuan
-                  </button>
+                  {goal.status === 'tercapai' ? (
+                    <div className="mt-4 rounded-2xl bg-secondary-container/50 p-4 text-center">
+                      <p className="text-sm font-bold text-secondary">Tujuan tercapai ✓</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">Goal ini sudah ditandai tuntas.</p>
+                      <button type="button" onClick={() => { openNewGoal(); setGoalForm((current) => ({ ...current, area: identity.subject || goal.area.split('·')[0].trim(), cp_id: goal.cp_id || '' })) }} className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"><Plus className="w-4 h-4" /> Buat pengayaan</button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button type="button" onClick={() => openEditGoal(goal)} className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+                        <Pencil className="w-4 h-4" /> Evaluasi atau revisi
+                      </button>
+                      {goal.capaian >= goal.target && (
+                        <button type="button" onClick={() => markGoalComplete(goal)} className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-bold text-white">
+                          <CheckCircle2 className="w-4 h-4" /> Tandai tuntas
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </article>
               )
             })}
             <button
               type="button"
               onClick={openNewGoal}
-              disabled={!hasPpi || ppiStatus === 'aktif'}
+              disabled={!hasPpi}
               className="w-full py-4 rounded-full border-2 border-dashed border-primary/30 text-primary font-bold inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Plus className="w-5 h-5" />
