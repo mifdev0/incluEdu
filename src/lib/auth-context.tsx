@@ -40,14 +40,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error) throw error
         if (data.session?.user && mounted) {
           await loadProfile(data.session.user.id, data.session.user.email || '')
-        } else if (mounted) {
-          setUser(null)
+          if (mounted) setLoading(false)
+          return
         }
       } catch {
-        if (mounted) setUser(null)
-      } finally {
-        if (mounted) setLoading(false)
+        // fallback below
       }
+
+      try {
+        const raw = typeof window !== 'undefined' ? window.localStorage.getItem('incluedu-auth-session') : null
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          const { data, error } = await supabase.auth.setSession({
+            access_token: parsed.access_token,
+            refresh_token: parsed.refresh_token,
+          })
+          if (!error && data.session?.user && mounted) {
+            await loadProfile(data.session.user.id, data.session.user.email || '')
+            if (mounted) setLoading(false)
+            return
+          }
+        }
+      } catch {
+        // no session
+      }
+
+      if (mounted) { setUser(null); setLoading(false) }
     }
 
     void restoreSession()
@@ -55,11 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
       if (event === 'SIGNED_OUT' || !session?.user) {
-        setUser(null)
-        setLoading(false)
+        setUser(null); setLoading(false)
         return
       }
-
       setLoading(true)
       window.setTimeout(async () => {
         if (!mounted) return
