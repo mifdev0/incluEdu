@@ -1,65 +1,23 @@
 'use client'
 
-import { TRACKING_LEVELS } from '@/lib/ppi-v2-data'
-
-type TrackingRow = {
-  tujuan_ppi_id: string
-  tanggal: string
-  sesi_ke: number
-  kode_bantuan: string
-  benar: number | null
-  total: number | null
-  langkah_label: string
-}
-
-type Goal = {
-  id: string
-  jenis_target: 'akademik' | 'non_akademik'
-  status: string
+export type ChartPoint = {
+  date: string
+  akademik: number | null
+  nonAkademik: number | null
 }
 
 type TrackingChartProps = {
-  tracking: TrackingRow[]
-  goals: Goal[]
+  points: ChartPoint[]
 }
 
-export function TrackingChart({ tracking, goals }: TrackingChartProps) {
-  const goalMap = new Map(goals.map((g) => [g.id, g]))
-  const academicIds = new Set(goals.filter((g) => g.jenis_target === 'akademik').map((g) => g.id))
-  const nonAcademicIds = new Set(goals.filter((g) => g.jenis_target === 'non_akademik').map((g) => g.id))
-
-  const byDate = new Map<string, { akademik: number[]; nonAkademik: number[] }>()
-  for (const row of tracking) {
-    if (!goalMap.has(row.tujuan_ppi_id)) continue
-    const dateKey = row.tanggal.slice(0, 10)
-    if (!byDate.has(dateKey)) byDate.set(dateKey, { akademik: [], nonAkademik: [] })
-    const bucket = byDate.get(dateKey)!
-    if (academicIds.has(row.tujuan_ppi_id) && row.benar !== null && row.total && row.total > 0) {
-      bucket.akademik.push(Math.round((row.benar / row.total) * 100))
-    }
-    if (nonAcademicIds.has(row.tujuan_ppi_id)) {
-      const score = TRACKING_LEVELS.find((l) => l.code === row.kode_bantuan)?.score
-      if (score !== undefined) bucket.nonAkademik.push(score)
-    }
-  }
-
-  const points: { date: string; akademik: number | null; nonAkademik: number | null }[] = []
-  const sorted = Array.from(byDate.entries()).sort(([a], [b]) => a.localeCompare(b))
-  for (const [date, values] of sorted) {
-    const avg = (arr: number[]) => (arr.length > 0 ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : null)
-    points.push({ date, akademik: avg(values.akademik), nonAkademik: avg(values.nonAkademik) })
-  }
-
+export function TrackingChart({ points }: TrackingChartProps) {
   const hasAcademic = points.some((p) => p.akademik !== null)
   const hasNonAcademic = points.some((p) => p.nonAkademik !== null)
 
   if (points.length === 0 || (!hasAcademic && !hasNonAcademic)) {
-    const matched = tracking.filter((r) => goalMap.has(r.tujuan_ppi_id)).length
     return (
       <div className="rounded-2xl bg-surface-container-low p-6 text-center text-sm text-on-surface-variant">
-        {tracking.length === 0
-          ? 'Belum ada data tracking.'
-          : `Data tracking (${tracking.length}) tidak menghasilkan grafik. ${matched} catatan cocok dengan goal — mungkin belum ada nilai akademik (benar/total) atau level bantuan non-akademik yang tercatat.`}
+        Belum ada data tracking untuk ditampilkan.
       </div>
     )
   }

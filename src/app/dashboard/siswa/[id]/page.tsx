@@ -142,6 +142,31 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const academicDetails = buildDetails(academic)
   const nonAcademicDetails = buildDetails(nonAcademic)
 
+  const computeChartPoints = () => {
+    const byDate = new Map<string, { akademik: number[]; nonAkademik: number[] }>()
+    const goalTypes = new Map(goals.map((g) => [g.id, g.jenis_target]))
+    for (const row of tracking) {
+      const type = goalTypes.get(row.tujuan_ppi_id)
+      if (!type) continue
+      const d = row.tanggal.slice(0, 10)
+      if (!byDate.has(d)) byDate.set(d, { akademik: [], nonAkademik: [] })
+      const b = byDate.get(d)!
+      if (type === 'akademik' && row.benar !== null && row.total && row.total > 0) {
+        b.akademik.push(Math.round((row.benar / row.total) * 100))
+      }
+      if (type === 'non_akademik') {
+        const s = TRACKING_LEVELS.find((l) => l.code === row.kode_bantuan)?.score
+        if (s !== undefined) b.nonAkademik.push(s)
+      }
+    }
+    return Array.from(byDate.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([date, v]) => ({
+      date,
+      akademik: v.akademik.length > 0 ? Math.round(v.akademik.reduce((s, n) => s + n, 0) / v.akademik.length) : null,
+      nonAkademik: v.nonAkademik.length > 0 ? Math.round(v.nonAkademik.reduce((s, n) => s + n, 0) / v.nonAkademik.length) : null,
+    }))
+  }
+  const chartPoints = computeChartPoints()
+
   return <div className="min-h-screen bg-[#FAFAF5]">
     <header className="app-header"><nav className="app-nav"><a href={`/dashboard/kelas/${student.kelas_id}`} className="text-on-surface-variant">← Kembali</a><BrandLogo compact mobileIconOnly /></nav></header>
     <main className="mx-auto max-w-container-max px-4 pb-20 pt-24 sm:pt-28">
@@ -179,7 +204,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
         <h2 className="mt-1 text-xl font-bold">Perkembangan harian</h2>
         <p className="mt-1 text-sm text-on-surface-variant">Nilai rata-rata akademik dan non-akademik setiap sesi tracking. Setiap tracking baru menambah satu titik.</p>
         <div className="mt-5">
-          <TrackingChart tracking={tracking} goals={goals} />
+          <TrackingChart points={chartPoints} />
         </div>
       </section>
 
