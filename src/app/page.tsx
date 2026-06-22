@@ -1,4 +1,4 @@
-import { ClipboardList, Bot, FileText, ArrowRight, Check, Target, BookOpen, BarChart3, ChevronRight } from 'lucide-react'
+import { ClipboardList, FileText, ArrowRight, Check, Target, BarChart3, ChevronRight, UsersRound, FileSignature, GraduationCap } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 
 export default function Home() {
@@ -53,7 +53,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-sm leading-[1.55] sm:text-body-lg text-on-surface-variant mb-5 sm:mb-lg max-w-2xl mx-auto">
-              Susun tujuan belajar, catat perkembangan, dan evaluasi PPI setiap siswa dalam satu ruang kerja yang mudah dipahami guru.
+              Bantu guru menyusun, menyepakati, menjalankan, dan mengevaluasi Program Pembelajaran Individual berdasarkan kemampuan nyata setiap siswa.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-md">
               <a href="/register" className="w-full sm:w-auto bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-6 sm:px-lg py-3.5 sm:py-4 rounded-full text-sm font-bold shadow-lg flex items-center justify-center gap-2">
@@ -76,7 +76,7 @@ export default function Home() {
                 Satu alur sederhana untuk mendampingi setiap siswa.
               </h2>
               <p className="text-sm leading-6 sm:text-body-lg text-on-surface-variant max-w-lg">
-                IncluEdu membantu guru fokus pada hal yang penting: memahami kebutuhan, melihat kemajuan, dan menyampaikan perkembangan dengan bahasa yang manusiawi.
+                Dari asesmen awal sampai laporan akhir, setiap data tersambung dalam satu alur PPI yang dapat ditinjau guru dan Tim PPI.
               </p>
             </div>
 
@@ -85,30 +85,48 @@ export default function Home() {
               {([
                 {
                   step: "01",
-                  title: "Amati dengan lebih terarah",
-                  desc: "Pertanyaan observasi menyesuaikan kebutuhan belajar siswa, jadi guru tidak perlu menebak apa yang harus dicatat.",
-                  detail: "Catatan singkat, relevan, dan dapat diisi setelah pembelajaran.",
+                  title: "Kenali siswa dan bentuk Tim PPI",
+                  desc: "Guru mencatat kebutuhan siswa, memilih kelas, dan melibatkan guru kelas, kepala sekolah, serta orang tua sejak awal.",
+                  detail: "AI dapat memberi indikasi awal bila kategori kebutuhan masih diragukan, tanpa menggantikan diagnosis tenaga ahli.",
                   bg: "bg-[#F3EAFF]",
                   color: "text-primary",
-                  icon: ClipboardList,
+                  icon: UsersRound,
                 },
                 {
                   step: "02",
-                  title: "Temukan pola perkembangannya",
-                  desc: "AI merangkum catatan menjadi pola yang mudah dibaca tanpa membandingkan siswa dengan teman sekelasnya.",
-                  detail: "Lihat kekuatan, tantangan, dan langkah pendampingan berikutnya.",
+                  title: "Temukan fase kemampuan aktual",
+                  desc: "Asesmen membaca, menulis, matematika, sikap belajar, sosial-emosional, bina diri, dan motorik disesuaikan dengan tingkat kelas.",
+                  detail: "Sistem merekomendasikan adaptasi Fase A–F berdasarkan kemampuan yang benar-benar diamati.",
                   bg: "bg-[#E4F8EE]",
                   color: "text-secondary",
-                  icon: Bot,
+                  icon: ClipboardList,
                 },
                 {
                   step: "03",
-                  title: "Ceritakan kemajuan dengan empati",
-                  desc: "Susun rapor naratif yang jelas bagi orang tua, tetap personal, dan berfokus pada perkembangan anak.",
-                  detail: "Draf siap ditinjau guru sebelum dibagikan.",
+                  title: "Susun target dari Capaian Pembelajaran",
+                  desc: "Guru memilih CP lintas fase lalu menyusun tujuan akademik dan non-akademik yang spesifik, terukur, dan dapat diamati.",
+                  detail: "AI menyiapkan draf tujuan, strategi, aktivitas, dan analisis tugas untuk ditinjau guru.",
                   bg: "bg-[#FFF5CF]",
                   color: "text-tertiary",
-                  icon: FileText,
+                  icon: Target,
+                },
+                {
+                  step: "04",
+                  title: "Sepakati kontrak layanan PPI",
+                  desc: "Rancangan PPI dirangkum menjadi dokumen tertulis untuk dibaca Tim PPI dan disetujui orang tua sebelum pelaksanaan.",
+                  detail: "Dokumen memuat asesmen, target, layanan, pelaksana, evaluasi, dan ruang tanda tangan.",
+                  bg: "bg-[#FCE8EC]",
+                  color: "text-[#B23A57]",
+                  icon: FileSignature,
+                },
+                {
+                  step: "05",
+                  title: "Tracking, evaluasi, dan laporkan",
+                  desc: "Guru mencatat tingkat bantuan per langkah dan hasil target utama dalam sesi Tracking 1, 2, 3, dan seterusnya.",
+                  detail: "Sistem menyusun ketercapaian, rekomendasi nilai, grafik, dan narasi yang tetap harus ditinjau guru.",
+                  bg: "bg-[#E7F2FF]",
+                  color: "text-[#2768A8]",
+                  icon: BarChart3,
                 },
               ] as const).map((item) => (
                 <article key={item.step} className={`${item.bg} relative rounded-[1.5rem] sm:rounded-[2rem] border border-white/70 p-5 md:p-lg overflow-hidden group transition-transform duration-300 hover:-translate-y-1`}>
@@ -137,12 +155,12 @@ export default function Home() {
         <section className="bg-[#241A36] py-14 sm:py-xl text-white" id="tentang">
           <div className="max-w-container-max mx-auto px-4 sm:px-gutter">
             <div className="max-w-2xl">
-              <span className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Satu siklus pendampingan</span>
+              <span className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Yang dihasilkan IncluEdu</span>
               <h2 className="font-display text-[25px] leading-[1.18] sm:text-display-lg-mobile mt-2 sm:mt-3">
-                Dari kebutuhan siswa menuju langkah yang bisa dilakukan guru.
+                Bukan sekadar catatan, tetapi program yang dapat dijalankan dan dipertanggungjawabkan.
               </h2>
               <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/65 leading-6 sm:leading-relaxed">
-                Empat bagian utama IncluEdu bekerja sebagai satu rangkaian, sehingga guru tidak perlu mengelola catatan yang terpisah-pisah.
+                Setiap keluaran berasal dari asesmen dan target individual siswa. AI membantu menyusun draf, sedangkan keputusan tetap berada pada guru dan Tim PPI.
               </p>
             </div>
 
@@ -151,29 +169,29 @@ export default function Home() {
                 {[
                   {
                     number: "01",
-                    title: "Rancang PPI",
-                    desc: "Tetapkan kemampuan awal dan tujuan belajar individual.",
-                    icon: Target,
+                    title: "Profil dan adaptasi CP",
+                    desc: "Ringkasan kekuatan, kebutuhan dukungan, dan fase kemampuan untuk setiap area akademik.",
+                    icon: GraduationCap,
                     accent: "bg-[#8B5CF6]",
                   },
                   {
                     number: "02",
-                    title: "Terapkan strategi",
-                    desc: "Gunakan adaptasi mengajar yang sesuai kebutuhan siswa.",
-                    icon: BookOpen,
+                    title: "Dokumen PPI",
+                    desc: "Kontrak layanan siap cetak yang memuat tujuan, strategi, Tim PPI, dan persetujuan orang tua.",
+                    icon: FileSignature,
                     accent: "bg-[#0F9F76]",
                   },
                   {
                     number: "03",
-                    title: "Pantau kemajuan",
-                    desc: "Catat hasil pembelajaran dan lihat perubahan dalam grafik.",
+                    title: "Bukti perkembangan",
+                    desc: "Tracking per sesi, tingkat bantuan, hasil tugas utama, dan ketercapaian setiap target.",
                     icon: BarChart3,
                     accent: "bg-[#D99B16]",
                   },
                   {
                     number: "04",
-                    title: "Evaluasi",
-                    desc: "Tinjau pencapaian PPI dan susun laporan untuk orang tua.",
+                    title: "Evaluasi dan laporan",
+                    desc: "Rekomendasi nilai akademik, capaian non-akademik, tindak lanjut, dan narasi untuk orang tua.",
                     icon: FileText,
                     accent: "bg-[#D65B73]",
                   },
@@ -211,7 +229,7 @@ export default function Home() {
           <div className="max-w-sm">
             <a href="/" aria-label="IncluEdu - Beranda"><BrandLogo className="mb-sm" /></a>
             <p className="text-sm sm:text-body-md text-on-surface-variant">
-              Memberdayakan setiap guru, mendukung setiap siswa. Solusi cerdas untuk pendidikan inklusif masa depan.
+              Ruang kerja digital untuk menyusun, menyepakati, melaksanakan, dan mengevaluasi PPI siswa berkebutuhan khusus.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-lg">
