@@ -118,9 +118,7 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
         })}
       </svg>
 
-      <div className="mt-2 text-center text-[11px] text-on-surface-variant">
-        {tracking.length} catatan tracking · {points.length} hari · nilai rata-rata harian
-      </div>
+      <div className="mt-2 text-center text-[11px] text-on-surface-variant">Titik melambangkan nilai rata-rata seluruh target per hari tracking.</div>
     </div>
   )
 }
