@@ -209,7 +209,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
         {showingResult && <div className="mt-6">
           <div className="mb-3 flex items-center justify-between text-xs font-bold text-on-surface-variant"><span>HASIL TARGET UTAMA</span><span>100%</span></div>
           <div className="h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full w-full rounded-full bg-primary" /></div>
-          {currentGoal.jenis_target === 'akademik' && <div className="mt-5 rounded-2xl bg-primary/5 p-4">
+          {currentGoal.jenis_target === 'akademik' && <><div className="mt-5 rounded-2xl bg-primary/5 p-4">
             <div className="text-xs font-bold text-primary">BUKTI HASIL AKADEMIK</div>
             <div className="mt-1 font-bold">{currentGoal.indikator}</div>
             <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
@@ -220,7 +220,8 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
               <label><span className="text-sm font-bold">Jumlah yang diuji</span><input type="number" min="1" value={total} onChange={(event) => setTotal(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" placeholder={currentGoal.skor_total_target?.toString() || '10'} /></label>
             </div>
             <p className="mt-3 text-xs font-semibold text-on-surface-variant">Perhitungan: berhasil ÷ jumlah yang diuji × 100. Nilai ini berlaku untuk target utama di atas, bukan untuk masing-masing langkah.</p>
-          </div>}
+          </div>
+          <button type="button" onClick={() => { if (goalIndex < goals.length - 1) { setGoalIndex((index) => index + 1); setStepIndex(0); setCorrect(''); setTotal(''); setNote('') } else { setCompleted(true) } }} className="mt-3 w-full rounded-2xl border-2 border-dashed border-outline-variant/40 px-4 py-3 text-sm font-bold text-on-surface-variant hover:bg-surface-container-low">Tidak ada jadwal mapel ini hari ini → Lewati</button></>}
           <div className="mt-4 rounded-2xl border border-outline-variant/20 p-4">
             <div className="text-xs font-bold text-on-surface-variant">RINGKASAN TINGKAT BANTUAN</div>
             <ol className="mt-2 space-y-2 text-sm">{steps.map((step, index) => <li key={step} className="flex justify-between gap-3"><span>{index + 1}. {step}</span><strong className="text-primary">{answers[`${currentGoal.id}_${index}`]}</strong></li>)}</ol>
