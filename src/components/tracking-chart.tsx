@@ -52,12 +52,12 @@ export function TrackingChart({ points }: TrackingChartProps) {
         <div className="ml-10 h-full">
           <svg width="100%" height="100%" className="overflow-visible" role="img" aria-label="Grafik perkembangan tracking harian">
             {[0, 25, 50, 75, 100].map((v) => (
-              <line key={v} x1="0" x2="100%" y1={`${100 - v}%`} y2={`${100 - v}%`} stroke="#E6DDEC" strokeDasharray={v === 0 ? undefined : '5 7'} />
+              <line key={v} x1="5%" x2="95%" y1={`${100 - v}%`} y2={`${100 - v}%`} stroke="#E6DDEC" strokeDasharray={v === 0 ? undefined : '5 7'} />
             ))}
             {visibleLines.map((l) => {
               const pts = l.data.map((v, i) => {
                 if (v === null) return null
-                const x = `${(i / Math.max(points.length - 1, 1)) * 100}%`
+                const x = `${5 + (i * 90) / Math.max(points.length - 1, 1)}%`
                 const y = `${100 - v}%`
                 return `${x},${y}`
               }).filter(Boolean).join(' ')
@@ -66,7 +66,7 @@ export function TrackingChart({ points }: TrackingChartProps) {
                   {pts.split(' ').length >= 2 && <polyline points={pts} fill="none" stroke={l.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
                   {l.data.map((v, i) => v !== null ? (
                     <g key={`${l.key}-${i}`}>
-                      <circle cx={`${(i / Math.max(points.length - 1, 1)) * 100}%`} cy={`${100 - v}%`} r="7" fill={l.color} stroke="white" strokeWidth="2" />
+                      <circle cx={`${5 + (i * 90) / Math.max(points.length - 1, 1)}%`} cy={`${100 - v}%`} r="7" fill={l.color} stroke="white" strokeWidth="2" />
                       <title>{`${l.label} ${shortDate(points[i].date)}: ${v}%`}</title>
                     </g>
                   ) : null)}
@@ -75,13 +75,13 @@ export function TrackingChart({ points }: TrackingChartProps) {
             })}
             {/* label tanggal */}
             {points.map((p, i) => (
-              <text key={p.date} x={`${(i / Math.max(points.length - 1, 1)) * 100}%`} y="100%" textAnchor="middle" dy="16" className="fill-[#4a4455] text-[11px] font-semibold">{shortDate(p.date)}</text>
+              <text key={p.date} x={`${5 + (i * 90) / Math.max(points.length - 1, 1)}%`} y="100%" textAnchor="middle" dy="16" className="fill-[#4a4455] text-[11px] font-semibold">{shortDate(p.date)}</text>
             ))}
           </svg>
         </div>
       </div>
 
-      <div className="mt-2 text-center text-[11px] text-on-surface-variant">Titik melambangkan nilai rata-rata seluruh target per hari tracking.</div>
+      <div className="mt-2 text-center text-[11px] text-on-surface-variant">Titik = nilai rata-rata per hari. {points.length < 2 ? 'Kumpulkan tracking di hari berbeda untuk melihat garis tren.' : 'Garis menunjukkan tren naik/turun antar hari.'}</div>
     </div>
   )
 }
