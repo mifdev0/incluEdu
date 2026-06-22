@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import type { PhaseRecommendation } from '@/lib/ppi-v2-data'
 import { TRACKING_LEVELS } from '@/lib/ppi-v2-data'
 import { AchievementDetailModal, type AchievementDetail } from '@/components/achievement-detail-modal'
+import { TrackingChart } from '@/components/tracking-chart'
 
 type Student = {
   nama: string
@@ -182,6 +183,15 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-primary" style={{ width: `${value ?? 0}%` }} /></div>
           </div>
         })}</div>
+      </section>
+
+      <section className="mt-4 rounded-3xl border bg-white p-5 sm:p-6">
+        <div className="text-xs font-bold text-primary">GRAFIK TRACKING</div>
+        <h2 className="mt-1 text-xl font-bold">Perkembangan harian</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">Nilai rata-rata akademik dan non-akademik setiap sesi tracking.</p>
+        <div className="mt-5">
+          <TrackingChart tracking={tracking} goals={goals} />
+        </div>
       </section>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
