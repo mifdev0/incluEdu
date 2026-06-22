@@ -6,7 +6,7 @@ import { CheckCircle2, FileDown, Sparkles } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
-import { TRACKING_LEVELS } from '@/lib/ppi-v2-data'
+import { expectedPhaseFromClass, TRACKING_LEVELS, type CurriculumPhase } from '@/lib/ppi-v2-data'
 import { supabase } from '@/lib/supabase'
 
 type Goal = {
@@ -15,6 +15,7 @@ type Goal = {
   tujuan: string
   target: number
   jenis_target: 'akademik' | 'non_akademik'
+  cp_id: string | null
   fase_adaptasi: string | null
   kriteria_tuntas: string | null
 }
@@ -37,6 +38,8 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [student, setStudent] = useState<{ nama: string; kategori: string; status_diagnosis: string } | null>(null)
+  const [classPhase, setClassPhase] = useState<CurriculumPhase | null>(null)
+  const [curriculum, setCurriculum] = useState<Array<{ id: string; mata_pelajaran: string; nama_elemen: string }>>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [tracking, setTracking] = useState<Tracking[]>([])
   const [team, setTeam] = useState<Array<{ nama: string; peran: string }>>([])
@@ -51,17 +54,23 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
     if (!user) return
     async function load() {
       const [studentResult, ppiResult, trackingResult, teamResult] = await Promise.all([
-        supabase.from('siswa').select('nama, kategori, status_diagnosis').eq('id', params.id).single(),
+        supabase.from('siswa').select('nama, kategori, status_diagnosis, kelas(nama, jenjang, tingkat)').eq('id', params.id).single(),
         supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_tracking').select('tujuan_ppi_id, tanggal, kode_bantuan, benar, total').eq('siswa_id', params.id).order('tanggal'),
         supabase.from('ppi_teams').select('nama, peran').eq('siswa_id', params.id),
       ])
       setStudent(studentResult.data)
+      const classData = studentResult.data?.kelas as unknown as { nama: string; jenjang: string; tingkat: number | null } | null
+      setClassPhase(classData ? expectedPhaseFromClass(classData.nama, classData.jenjang, classData.tingkat) : null)
       setTracking((trackingResult.data || []) as Tracking[])
       setTeam(teamResult.data || [])
       if (ppiResult.data) {
-        const { data } = await supabase.from('tujuan_ppi').select('id, area, tujuan, target, jenis_target, fase_adaptasi, kriteria_tuntas').eq('ppi_id', ppiResult.data.id).order('created_at')
+        const [{ data }, { data: cpRows }] = await Promise.all([
+          supabase.from('tujuan_ppi').select('id, area, tujuan, target, jenis_target, cp_id, fase_adaptasi, kriteria_tuntas').eq('ppi_id', ppiResult.data.id).order('created_at'),
+          supabase.from('curriculum_cp').select('id, mata_pelajaran, nama_elemen'),
+        ])
         setGoals((data || []) as Goal[])
+        setCurriculum(cpRows || [])
       }
       setLoading(false)
     }
@@ -129,6 +138,16 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
     }
   }
 
+  function goalTitle(goal: Goal) {
+    if (goal.jenis_target !== 'akademik') return goal.area
+    const cp = curriculum.find((item) => item.id === goal.cp_id)
+    if (cp) return `${cp.mata_pelajaran} (${cp.nama_elemen})`
+    if (goal.area.toLowerCase().includes('membaca')) return 'Bahasa Indonesia (Membaca)'
+    if (goal.area.toLowerCase().includes('menulis')) return 'Bahasa Indonesia (Menulis)'
+    if (goal.area.toLowerCase().includes('matematika') || goal.area.toLowerCase().includes('berhitung')) return 'Matematika'
+    return goal.area.replace(' · ', ' (') + (goal.area.includes(' · ') ? ')' : '')
+  }
+
   return <div className="min-h-screen bg-[#FAFAF5] print:bg-white">
     <header className="app-header print:hidden"><nav className="app-nav"><a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant">← Profil</a><BrandLogo compact mobileIconOnly /></nav></header>
     <main className="mx-auto max-w-4xl px-4 pb-20 pt-24 sm:pt-28 print:pt-0">
@@ -137,14 +156,15 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
         <div className="flex gap-2 print:hidden"><button onClick={generate} disabled={generating || tracking.length === 0} className="rounded-full bg-primary px-5 py-3 font-bold text-white disabled:opacity-40">{generating ? <LoadingSpinner label="Menyusun..." /> : <><Sparkles className="mr-2 inline h-4 w-4" />Buat narasi</>}</button><button onClick={() => window.print()} className="rounded-full bg-surface-container-high px-5 py-3 font-bold"><FileDown className="mr-2 inline h-4 w-4" />Cetak / PDF</button></div>
       </div>
       {error && <div className="mt-4 rounded-2xl bg-error-container p-4 text-sm text-error">{error}</div>}
-      {tracking.length === 0 && <div className="mt-6 rounded-3xl border-2 border-dashed bg-white p-8 text-center"><h2 className="font-bold">Belum ada tracking harian</h2><p className="mt-1 text-sm text-on-surface-variant">Nilai dan evaluasi akan muncul setelah guru mencatat pelaksanaan target.</p></div>}
+      {tracking.length === 0 && <div className="mt-6 rounded-3xl border-2 border-dashed bg-white p-8 text-center"><h2 className="font-bold">Belum ada tracking harian</h2><p className="mt-1 text-sm text-on-surface-variant">Rekomendasi penilaian dan evaluasi akan muncul setelah guru mencatat pelaksanaan target.</p></div>}
 
       <div className="mt-6 space-y-4">
         {results.map((item) => <section key={item.id} className="rounded-3xl border bg-white p-5 sm:p-6">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><div className="text-xs font-bold text-primary">{item.area}{item.fase_adaptasi ? ` · CP Fase ${item.fase_adaptasi}` : ''}</div><h2 className="mt-1 text-lg font-bold">{item.tujuan}</h2><p className="mt-2 text-xs text-on-surface-variant">{item.kriteria_tuntas}</p></div><div className="shrink-0 text-left sm:text-right"><div className="text-4xl font-bold">{item.value}{item.jenis_target === 'non_akademik' ? '%' : ''}</div><div className="text-xs text-on-surface-variant">{item.jenis_target === 'akademik' ? 'Nilai berdasarkan benar/total' : 'Ketercapaian target'}</div></div></div>
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><div className="text-xs font-bold text-primary">{goalTitle(item)}</div><div className="mt-2 flex flex-wrap gap-2">{item.jenis_target === 'akademik' && classPhase && <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">Fase kelas {classPhase}</span>}{item.fase_adaptasi && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Adaptasi CP Fase {item.fase_adaptasi}</span>}{item.jenis_target === 'non_akademik' && <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">Target non-akademik</span>}</div><h2 className="mt-3 text-lg font-bold">{item.tujuan}</h2><p className="mt-2 text-xs text-on-surface-variant">{item.kriteria_tuntas}</p></div><div className="shrink-0 text-left sm:text-right"><div className="text-4xl font-bold">{item.value}%</div><div className="max-w-[180px] text-xs text-on-surface-variant">{item.jenis_target === 'akademik' ? 'Rekomendasi nilai berdasarkan benar ÷ total' : 'Ketercapaian target individual'}</div></div></div>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full bg-primary" style={{ width: `${item.value}%` }} /></div>
           <div className={`mt-4 inline-flex rounded-full px-3 py-1.5 text-xs font-bold ${item.value >= item.target ? 'bg-secondary-container/40 text-secondary' : 'bg-tertiary-fixed/40 text-tertiary'}`}>{item.value >= item.target ? 'Lanjut / pengayaan' : 'Ulang / remedial'}</div>
           {narratives[item.id] && <p className="mt-4 leading-relaxed">{narratives[item.id].narrative}</p>}
+          {item.jenis_target === 'akademik' && <p className="mt-4 rounded-2xl bg-primary/5 p-3 text-xs leading-relaxed text-on-surface-variant">Angka ini merupakan rekomendasi sistem berdasarkan bukti tracking pada target PPI. Guru tetap meninjau konteks pembelajaran dan mengesahkan nilai akhir mata pelajaran.</p>}
         </section>)}
       </div>
 

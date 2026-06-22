@@ -8,7 +8,7 @@ import { CalendarDays, CheckCircle2, ClipboardList, ListChecks, Pencil, Plus, Ta
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
-import { buildNonAcademicGoal, type AssessmentResponseRow } from '@/lib/ppi-v2-data'
+import { buildNonAcademicGoal, expectedPhaseFromClass, type AssessmentResponseRow, type CurriculumPhase } from '@/lib/ppi-v2-data'
 
 const statusMap = {
   belum_dimulai: { label: 'Belum dimulai', style: 'bg-surface-container-high text-on-surface-variant' },
@@ -42,6 +42,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [studentName, setStudentName] = useState('')
+  const [classPhase, setClassPhase] = useState<CurriculumPhase | null>(null)
   const [goals, setGoals] = useState<PpiGoal[]>([])
   const [strategies, setStrategies] = useState<string[]>([])
   const [longTermGoal, setLongTermGoal] = useState('')
@@ -62,7 +63,11 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!loading && !user) router.push('/login')
     if (user) {
-      supabase.from('siswa').select('nama').eq('id', params.id).single().then(({ data }) => setStudentName(data?.nama || ''))
+      supabase.from('siswa').select('nama, kelas(nama, jenjang, tingkat)').eq('id', params.id).single().then(({ data }) => {
+        setStudentName(data?.nama || '')
+        const classData = data?.kelas as unknown as { nama: string; jenjang: string; tingkat: number | null } | null
+        setClassPhase(classData ? expectedPhaseFromClass(classData.nama, classData.jenjang, classData.tingkat) : null)
+      })
       supabase.from('assessment_responses').select('item_key, item_label, domain, nilai').eq('siswa_id', params.id).then(({ data }) => {
         setAssessmentResponses((data || []) as AssessmentResponseRow[])
       })
@@ -91,6 +96,31 @@ export default function PpiPage({ params }: { params: { id: string } }) {
 
   const displayName = studentName || 'Siswa'
   const hasNonAcademicGoal = goals.some((goal) => goal.jenis_target === 'non_akademik')
+
+  function goalIdentity(goal: PpiGoal) {
+    if (goal.jenis_target !== 'akademik') {
+      return {
+        title: goal.area,
+        subject: null,
+        element: null,
+      }
+    }
+    const cp = cpOptions.find((item) => item.id === goal.cp_id)
+    if (cp) {
+      return {
+        title: `${cp.mata_pelajaran} (${cp.nama_elemen})`,
+        subject: cp.mata_pelajaran,
+        element: cp.nama_elemen,
+      }
+    }
+    const [subject, element] = goal.area.split('·').map((item) => item.trim())
+    const isKnownSubject = ['Bahasa Indonesia', 'Matematika'].includes(subject)
+    if (isKnownSubject && element) return { title: `${subject} (${element})`, subject, element }
+    if (goal.area.toLowerCase().includes('membaca')) return { title: 'Bahasa Indonesia (Membaca)', subject: 'Bahasa Indonesia', element: 'Membaca' }
+    if (goal.area.toLowerCase().includes('menulis')) return { title: 'Bahasa Indonesia (Menulis)', subject: 'Bahasa Indonesia', element: 'Menulis' }
+    if (goal.area.toLowerCase().includes('matematika') || goal.area.toLowerCase().includes('berhitung')) return { title: 'Matematika', subject: 'Matematika', element: goal.area }
+    return { title: goal.area, subject: null, element: goal.area }
+  }
 
   function openNewGoal() {
     setEditingGoal(null)
@@ -326,15 +356,17 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             )}
             {goals.map((goal) => {
               const status = statusMap[goal.status]
+              const identity = goalIdentity(goal)
               return (
                 <article key={goal.id} className="bg-white rounded-3xl border border-outline-variant/20 p-5 sm:p-md">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                     <div>
-                      <span className="text-xs font-bold text-primary">{goal.area.toUpperCase()}</span>
+                      <span className="text-xs font-bold text-primary">{identity.title.toUpperCase()}</span>
                       <h3 className="text-lg font-bold mt-1">{goal.tujuan}</h3>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">{goal.jenis_target === 'akademik' ? 'Target akademik' : 'Target non-akademik'}</span>
-                        {goal.fase_adaptasi && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">CP Fase {goal.fase_adaptasi}</span>}
+                        {goal.jenis_target === 'akademik' && classPhase && <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">Fase kelas {classPhase}</span>}
+                        {goal.fase_adaptasi && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Adaptasi CP Fase {goal.fase_adaptasi}</span>}
                       </div>
                     </div>
                     <span className={`w-fit px-3 py-1.5 rounded-full text-xs font-bold ${status.style}`}>{status.label}</span>
@@ -372,6 +404,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                   <div className="mt-3 rounded-2xl border border-outline-variant/20 p-4">
                     <div className="text-xs font-bold text-on-surface-variant">KRITERIA KETUNTASAN</div>
                     <p className="mt-1 text-sm font-semibold">{goal.kriteria_tuntas || `Tuntas apabila mencapai ${goal.target}%`}</p>
+                    {goal.jenis_target === 'akademik' && <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">Hasil tracking menjadi rekomendasi penilaian untuk {identity.subject || 'mata pelajaran terkait'}. Nilai akhir tetap ditinjau dan disahkan oleh guru.</p>}
                   </div>
                   <button type="button" onClick={() => openEditGoal(goal)} className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-primary">
                     <Pencil className="w-4 h-4" /> Evaluasi atau revisi tujuan
