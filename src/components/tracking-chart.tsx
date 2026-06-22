@@ -84,7 +84,6 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
   ]
 
   const hasData = (key: string) => lines.find((l) => l.key === key)!.data.some((v) => v !== null)
-  const isSingle = points.length === 1
 
   return (
     <div>
@@ -97,23 +96,7 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
         ))}
       </div>
 
-      {isSingle ? (
-        <div className="flex items-end justify-center gap-8 py-6">
-          {lines.filter((l) => hasData(l.key)).map((l) => {
-            const v = l.data[0]!
-            return (
-              <div key={l.key} className="text-center">
-                <div className="text-3xl font-bold" style={{ color: l.color }}>{v}%</div>
-                <div className="mt-1 text-xs text-on-surface-variant">{l.label}</div>
-                <div className="mt-2 mx-auto h-2 w-24 rounded-full bg-surface-container-high">
-                  <div className="h-full rounded-full" style={{ width: `${v}%`, backgroundColor: l.color }} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label="Grafik perkembangan tracking harian">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label="Grafik perkembangan tracking harian">
           {[0, 25, 50, 75, 100].map((v) => (
             <g key={v}>
               <line x1={pad.left} x2={width - pad.right} y1={yPos(v)} y2={yPos(v)} stroke="#E6DDEC" strokeDasharray={v === 0 ? undefined : '5 7'} />
@@ -138,7 +121,6 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
             )
           })}
         </svg>
-      )}
 
       <div className="mt-2 text-center text-[11px] text-on-surface-variant">Nilai rata-rata harian · target ideal 100%</div>
     </div>
