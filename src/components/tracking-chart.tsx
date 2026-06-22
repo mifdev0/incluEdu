@@ -27,9 +27,15 @@ export function TrackingChart({ points }: TrackingChartProps) {
     return `${parseInt(parts[2])}/${parseInt(parts[1])}`
   }
 
+  const W = 700, H = 260, PL = 48, PR = 24, PT = 20, PB = 40
+  const CW = W - PL - PR
+  const CH = H - PT - PB
+  const xPos = (i: number) => PL + (i * CW) / Math.max(points.length - 1, 1)
+  const yPos = (v: number) => PT + ((100 - v) / 100) * CH
+
   const visibleLines = [
-    { key: 'akademik', label: 'Akademik', color: '#7C3AED', data: points.map((p) => p.akademik), show: hasAcademic },
-    { key: 'nonAkademik', label: 'Non-akademik', color: '#16825D', data: points.map((p) => p.nonAkademik), show: hasNonAcademic },
+    { key: 'akademik', label: 'Akademik', color: '#7C3AED', lineColor: '#7C3AED', data: points.map((p) => p.akademik), show: hasAcademic },
+    { key: 'nonAkademik', label: 'Non-akademik', color: '#16825D', lineColor: '#16825D', data: points.map((p) => p.nonAkademik), show: hasNonAcademic },
   ].filter((l) => l.show)
 
   return (
@@ -43,43 +49,31 @@ export function TrackingChart({ points }: TrackingChartProps) {
         ))}
       </div>
 
-      <div className="relative" style={{ height: '220px' }}>
-        {/* sumbu Y */}
-        <div className="absolute left-0 top-0 flex h-full flex-col justify-between text-[11px] text-on-surface-variant">
-          <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
-        </div>
-        {/* area chart */}
-        <div className="ml-10 h-full">
-          <svg width="100%" height="100%" className="overflow-visible" role="img" aria-label="Grafik perkembangan tracking harian">
-            {[0, 25, 50, 75, 100].map((v) => (
-              <line key={v} x1="5%" x2="95%" y1={`${100 - v}%`} y2={`${100 - v}%`} stroke="#E6DDEC" strokeDasharray={v === 0 ? undefined : '5 7'} />
-            ))}
-            {visibleLines.map((l) => {
-              const pts = l.data.map((v, i) => {
-                if (v === null) return null
-                const x = `${5 + (i * 90) / Math.max(points.length - 1, 1)}%`
-                const y = `${100 - v}%`
-                return `${x},${y}`
-              }).filter(Boolean).join(' ')
-              return (
-                <g key={l.key}>
-                  {pts.split(' ').length >= 2 && <polyline points={pts} fill="none" stroke={l.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
-                  {l.data.map((v, i) => v !== null ? (
-                    <g key={`${l.key}-${i}`}>
-                      <circle cx={`${5 + (i * 90) / Math.max(points.length - 1, 1)}%`} cy={`${100 - v}%`} r="7" fill={l.color} stroke="white" strokeWidth="2" />
-                      <title>{`${l.label} ${shortDate(points[i].date)}: ${v}%`}</title>
-                    </g>
-                  ) : null)}
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label="Grafik perkembangan tracking harian">
+        {[0, 25, 50, 75, 100].map((v) => (
+          <g key={v}>
+            <line x1={PL} x2={W - PR} y1={yPos(v)} y2={yPos(v)} stroke="#E6DDEC" strokeDasharray={v === 0 ? undefined : '5 7'} />
+            <text x={PL - 8} y={yPos(v) + 4} textAnchor="end" className="fill-[#7b7487] text-[11px]">{v}</text>
+          </g>
+        ))}
+        {points.map((p, i) => (
+          <text key={p.date} x={xPos(i)} y={H - 10} textAnchor="middle" className="fill-[#4a4455] text-[11px] font-semibold">{shortDate(p.date)}</text>
+        ))}
+        {visibleLines.map((l) => {
+          const pts = l.data.map((v, i) => (v !== null ? `${xPos(i)},${yPos(v)}` : null)).filter(Boolean).join(' ')
+          return (
+            <g key={l.key}>
+              {points.length >= 2 && <polyline points={pts} fill="none" stroke={l.lineColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+              {l.data.map((v, i) => v !== null ? (
+                <g key={`${l.key}-${i}`}>
+                  <circle cx={xPos(i)} cy={yPos(v)} r="7" fill={l.color} stroke="white" strokeWidth="2" />
+                  <title>{`${l.label} ${shortDate(points[i].date)}: ${v}%`}</title>
                 </g>
-              )
-            })}
-            {/* label tanggal */}
-            {points.map((p, i) => (
-              <text key={p.date} x={`${5 + (i * 90) / Math.max(points.length - 1, 1)}%`} y="100%" textAnchor="middle" dy="16" className="fill-[#4a4455] text-[11px] font-semibold">{shortDate(p.date)}</text>
-            ))}
-          </svg>
-        </div>
-      </div>
+              ) : null)}
+            </g>
+          )
+        })}
+      </svg>
 
       <div className="mt-2 text-center text-[11px] text-on-surface-variant">Titik = nilai rata-rata per hari. {points.length < 2 ? 'Kumpulkan tracking di hari berbeda untuk melihat garis tren.' : 'Garis menunjukkan tren naik/turun antar hari.'}</div>
     </div>
