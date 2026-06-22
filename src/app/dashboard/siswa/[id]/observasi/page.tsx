@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
@@ -18,6 +18,8 @@ type Goal = {
   jenis_target: 'akademik' | 'non_akademik'
   kriteria_tuntas: string | null
   langkah_tugas: string[]
+  skor_benar_target: number | null
+  skor_total_target: number | null
 }
 
 export default function TrackingHarianPage({ params }: { params: { id: string } }) {
@@ -27,6 +29,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
   const [goals, setGoals] = useState<Goal[]>([])
   const [ppiApproved, setPpiApproved] = useState(false)
   const [goalIndex, setGoalIndex] = useState(0)
+  const [stepIndex, setStepIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [correct, setCorrect] = useState('')
   const [total, setTotal] = useState('')
@@ -52,7 +55,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
       if (ppiResult.data) {
         setPpiApproved(ppiResult.data.status === 'aktif')
         const { data } = await supabase.from('tujuan_ppi')
-          .select('id, area, tujuan, indikator, target, jenis_target, kriteria_tuntas, langkah_tugas')
+          .select('id, area, tujuan, indikator, target, jenis_target, kriteria_tuntas, langkah_tugas, skor_benar_target, skor_total_target')
           .eq('ppi_id', ppiResult.data.id)
           .order('created_at')
         setGoals((data || []) as Goal[])
@@ -70,6 +73,8 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
       : [currentGoal.indikator || currentGoal.tujuan]
   }, [currentGoal])
   const allAnswered = steps.every((_, index) => answers[`${currentGoal?.id}_${index}`])
+  const showingResult = stepIndex >= steps.length
+  const currentStep = steps[stepIndex]
 
   if (authLoading || !user || loading) return <FullPageLoading label="Menyiapkan tracking harian..." />
 
@@ -140,6 +145,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
     setSaving(false)
     if (goalIndex < goals.length - 1) {
       setGoalIndex((index) => index + 1)
+      setStepIndex(0)
       setCorrect('')
       setTotal('')
       setNote('')
@@ -161,6 +167,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
       <button type="button" onClick={() => {
         setSessionNumber((current) => current + 1)
         setGoalIndex(0)
+        setStepIndex(0)
         setAnswers({})
         setCorrect('')
         setTotal('')
@@ -182,19 +189,49 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
         <h2 className="mt-3 text-xl font-bold">{currentGoal.tujuan}</h2>
         <p className="mt-2 text-sm text-on-surface-variant">{currentGoal.kriteria_tuntas || `Target ketuntasan ${currentGoal.target}%`}</p>
 
-        <div className="mt-6 space-y-6">
-          {steps.map((step, index) => <div key={`${currentGoal.id}_${index}`}>
-            <div className="text-sm font-bold"><span className="text-primary">{index + 1}.</span> {step}</div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {TRACKING_LEVELS.map((level) => <button key={level.code} type="button" onClick={() => setAnswers((current) => ({ ...current, [`${currentGoal.id}_${index}`]: level.code }))} className={`rounded-2xl border p-3 text-left ${answers[`${currentGoal.id}_${index}`] === level.code ? 'border-primary bg-primary text-white' : 'bg-surface-container-low'}`}><span className="block text-lg font-bold">{level.code}</span><span className="block text-sm font-bold">{level.label}</span><span className={`mt-1 block text-xs ${answers[`${currentGoal.id}_${index}`] === level.code ? 'text-white/75' : 'text-on-surface-variant'}`}>{level.description}</span></button>)}
-            </div>
-          </div>)}
-        </div>
+        {!showingResult && <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between text-xs font-bold text-on-surface-variant"><span>LANGKAH {stepIndex + 1} DARI {steps.length}</span><span>{Math.round(((stepIndex + 1) / (steps.length + 1)) * 100)}%</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full rounded-full bg-primary" style={{ width: `${((stepIndex + 1) / (steps.length + 1)) * 100}%` }} /></div>
+          <div className="mt-5 rounded-2xl bg-primary/5 p-4">
+            <div className="text-xs font-bold text-primary">KEMAMPUAN YANG DIAMATI</div>
+            <div className="mt-1 text-lg font-bold">{currentStep}</div>
+            <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">Pilih tingkat bantuan yang benar-benar dibutuhkan siswa untuk langkah ini.</p>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {TRACKING_LEVELS.map((level) => <button key={level.code} type="button" onClick={() => setAnswers((current) => ({ ...current, [`${currentGoal.id}_${stepIndex}`]: level.code }))} className={`rounded-2xl border p-3 text-left ${answers[`${currentGoal.id}_${stepIndex}`] === level.code ? 'border-primary bg-primary text-white' : 'bg-surface-container-low'}`}><span className="block text-lg font-bold">{level.code}</span><span className="block text-sm font-bold">{level.label}</span><span className={`mt-1 block text-xs ${answers[`${currentGoal.id}_${stepIndex}`] === level.code ? 'text-white/75' : 'text-on-surface-variant'}`}>{level.description}</span></button>)}
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setStepIndex((index) => Math.max(0, index - 1))} disabled={stepIndex === 0} className="rounded-full bg-surface-container-high py-3 font-bold disabled:opacity-30"><ArrowLeft className="mr-2 inline h-4 w-4" />Sebelumnya</button>
+            <button type="button" onClick={() => setStepIndex((index) => index + 1)} disabled={!answers[`${currentGoal.id}_${stepIndex}`]} className="rounded-full bg-primary py-3 font-bold text-white disabled:opacity-40">{stepIndex === steps.length - 1 ? 'Lanjut ke hasil target' : 'Langkah berikutnya'}<ArrowRight className="ml-2 inline h-4 w-4" /></button>
+          </div>
+        </div>}
 
-        {currentGoal.jenis_target === 'akademik' && <div className="mt-6 rounded-2xl bg-primary/5 p-4"><div className="font-bold">Hasil tugas atau soal</div><p className="mt-1 text-xs text-on-surface-variant">Nilai angka dihitung otomatis dari jawaban benar ÷ total soal.</p><div className="mt-3 grid grid-cols-2 gap-3"><label><span className="text-sm font-bold">Benar</span><input type="number" min="0" value={correct} onChange={(event) => setCorrect(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" /></label><label><span className="text-sm font-bold">Total</span><input type="number" min="1" value={total} onChange={(event) => setTotal(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" /></label></div></div>}
-        <label className="mt-5 block"><span className="text-sm font-bold">Catatan singkat (opsional)</span><textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" placeholder="Situasi penting saat kegiatan berlangsung..." /></label>
-        {error && <div className="mt-4 rounded-2xl bg-error-container p-3 text-sm text-error">{error}</div>}
-        <button type="button" onClick={saveGoalTracking} disabled={!allAnswered || saving} className="mt-5 w-full rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{saving ? <LoadingSpinner label="Menyimpan..." /> : goalIndex < goals.length - 1 ? <>Simpan dan lanjut target berikutnya <ArrowRight className="ml-2 inline h-4 w-4" /></> : `Selesaikan Tracking ${sessionNumber}`}</button>
+        {showingResult && <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between text-xs font-bold text-on-surface-variant"><span>HASIL TARGET UTAMA</span><span>100%</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface-container-high"><div className="h-full w-full rounded-full bg-primary" /></div>
+          {currentGoal.jenis_target === 'akademik' && <div className="mt-5 rounded-2xl bg-primary/5 p-4">
+            <div className="text-xs font-bold text-primary">BUKTI HASIL AKADEMIK</div>
+            <div className="mt-1 font-bold">{currentGoal.indikator}</div>
+            <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">
+              Isi hasil tes atau tugas utama setelah seluruh langkah latihan dilakukan. Contoh: jika siswa diuji membaca 10 kata dan 7 benar, isi Benar 7 dan Total 10.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <label><span className="text-sm font-bold">Berhasil / benar</span><input type="number" min="0" value={correct} onChange={(event) => setCorrect(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" placeholder={currentGoal.skor_benar_target?.toString() || '7'} /></label>
+              <label><span className="text-sm font-bold">Jumlah yang diuji</span><input type="number" min="1" value={total} onChange={(event) => setTotal(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" placeholder={currentGoal.skor_total_target?.toString() || '10'} /></label>
+            </div>
+            <p className="mt-3 text-xs font-semibold text-on-surface-variant">Perhitungan: berhasil ÷ jumlah yang diuji × 100. Nilai ini berlaku untuk target utama di atas, bukan untuk masing-masing langkah.</p>
+          </div>}
+          <div className="mt-4 rounded-2xl border border-outline-variant/20 p-4">
+            <div className="text-xs font-bold text-on-surface-variant">RINGKASAN TINGKAT BANTUAN</div>
+            <ol className="mt-2 space-y-2 text-sm">{steps.map((step, index) => <li key={step} className="flex justify-between gap-3"><span>{index + 1}. {step}</span><strong className="text-primary">{answers[`${currentGoal.id}_${index}`]}</strong></li>)}</ol>
+          </div>
+          <label className="mt-5 block"><span className="text-sm font-bold">Catatan singkat (opsional)</span><textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" placeholder="Situasi penting saat kegiatan berlangsung..." /></label>
+          {error && <div className="mt-4 rounded-2xl bg-error-container p-3 text-sm text-error">{error}</div>}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <button type="button" onClick={() => setStepIndex(Math.max(0, steps.length - 1))} className="rounded-full bg-surface-container-high py-4 font-bold"><ArrowLeft className="mr-2 inline h-4 w-4" />Periksa langkah</button>
+            <button type="button" onClick={saveGoalTracking} disabled={!allAnswered || saving || (currentGoal.jenis_target === 'akademik' && (!total || correct === ''))} className="rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{saving ? <LoadingSpinner label="Menyimpan..." /> : goalIndex < goals.length - 1 ? <>Simpan dan lanjut target berikutnya <ArrowRight className="ml-2 inline h-4 w-4" /></> : `Selesaikan Tracking ${sessionNumber}`}</button>
+          </div>
+        </div>}
       </section>
     </main>
   </div>
