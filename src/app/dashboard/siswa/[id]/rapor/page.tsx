@@ -52,6 +52,7 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => { document.title = 'Evaluasi PPI - IncluEdu' }, [])
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
     if (!user) return
@@ -148,6 +149,7 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
   }
 
   return <div className="min-h-screen bg-[#FAFAF5] print:bg-white">
+    <style>{`@page { margin: 12mm 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
     {generating && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/50 backdrop-blur-sm"><div className="rounded-3xl bg-white p-8 text-center shadow-2xl"><LoadingSpinner label="Menyusun evaluasi..." /><p className="mt-4 text-sm text-on-surface-variant">AI sedang menganalisis data tracking dan menyusun narasi.</p></div></div>}
     <header className="app-header print:hidden"><nav className="app-nav"><a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant">← Profil</a><BrandLogo compact mobileIconOnly /></nav></header>
     <main className="mx-auto max-w-4xl px-4 pb-20 pt-24 sm:pt-28 print:pt-0">
