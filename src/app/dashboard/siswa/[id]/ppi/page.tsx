@@ -784,6 +784,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                       cp_id: nextCp?.id || '',
                       kriteria_tuntas: `Tuntas apabila mencapai minimal ${data.target || 80}%`,
                     })
+                    setEditingGoal(null)
                     setGoalModalOpen(true)
                   } else {
                     setGoalError('AI gagal membuat pengayaan. Coba manual.')
