@@ -16,7 +16,7 @@ export default function Home() {
             <a href="/login" className="px-3 sm:px-5 py-2.5 rounded-full font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">Masuk</a>
             <a href="/register" className="bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-4 sm:px-gutter py-2.5 rounded-full font-label-md text-label-md shadow-sm inline-block whitespace-nowrap">
               <span className="sm:hidden">Daftar</span>
-              <span className="hidden sm:inline">Mulai Gratis</span>
+              <span className="hidden sm:inline">Coba Sekarang</span>
             </a>
           </div>
         </nav>
@@ -57,7 +57,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-md">
               <a href="/register" className="w-full sm:w-auto bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-6 sm:px-lg py-3.5 sm:py-4 rounded-full text-sm font-bold shadow-lg flex items-center justify-center gap-2">
-                Mulai Gratis
+                Coba Sekarang
                 <ArrowRight className="w-5 h-5" />
               </a>
             </div>
