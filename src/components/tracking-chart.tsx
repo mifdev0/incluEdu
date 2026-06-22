@@ -15,6 +15,7 @@ type TrackingRow = {
 type Goal = {
   id: string
   jenis_target: 'akademik' | 'non_akademik'
+  status: string
 }
 
 type TrackingChartProps = {
@@ -29,11 +30,13 @@ type DailyPoint = {
 }
 
 export function TrackingChart({ tracking, goals }: TrackingChartProps) {
-  const academicIds = new Set(goals.filter((g) => g.jenis_target === 'akademik').map((g) => g.id))
-  const nonAcademicIds = new Set(goals.filter((g) => g.jenis_target === 'non_akademik').map((g) => g.id))
+  const activeIds = new Set(goals.filter((g) => g.status !== 'tercapai').map((g) => g.id))
+  const academicIds = new Set(goals.filter((g) => g.jenis_target === 'akademik' && activeIds.has(g.id)).map((g) => g.id))
+  const nonAcademicIds = new Set(goals.filter((g) => g.jenis_target === 'non_akademik' && activeIds.has(g.id)).map((g) => g.id))
 
   const byDate = new Map<string, { akademik: number[]; nonAkademik: number[] }>()
   for (const row of tracking) {
+    if (!activeIds.has(row.tujuan_ppi_id)) continue
     if (!byDate.has(row.tanggal)) byDate.set(row.tanggal, { akademik: [], nonAkademik: [] })
     const bucket = byDate.get(row.tanggal)!
     if (academicIds.has(row.tujuan_ppi_id) && row.benar !== null && row.total && row.total > 0) {
@@ -52,10 +55,12 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
     points.push({ date, akademik: avg(values.akademik), nonAkademik: avg(values.nonAkademik) })
   }
 
-  if (points.length < 2) {
+  const anyData = points.some((p) => p.akademik !== null || p.nonAkademik !== null)
+
+  if (points.length === 0 || !anyData) {
     return (
       <div className="rounded-2xl bg-surface-container-low p-6 text-center text-sm text-on-surface-variant">
-        {points.length === 1 ? 'Data tracking masih 1 hari. Kumpulkan lebih banyak data untuk melihat grafik.' : 'Belum ada data tracking untuk ditampilkan.'}
+        Belum ada data tracking untuk goal yang aktif.
       </div>
     )
   }
@@ -79,6 +84,7 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
   ]
 
   const hasData = (key: string) => lines.find((l) => l.key === key)!.data.some((v) => v !== null)
+  const isSingle = points.length === 1
 
   return (
     <div>
@@ -90,31 +96,50 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
           </div>
         ))}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label="Grafik perkembangan tracking harian">
-        {[0, 25, 50, 75, 100].map((v) => (
-          <g key={v}>
-            <line x1={pad.left} x2={width - pad.right} y1={yPos(v)} y2={yPos(v)} stroke="#E6DDEC" strokeDasharray={v === 0 ? undefined : '5 7'} />
-            <text x={pad.left - 10} y={yPos(v) + 4} textAnchor="end" className="fill-[#7b7487] text-[11px]">{v}</text>
-          </g>
-        ))}
-        {points.map((p, i) => (
-          <text key={p.date} x={xPos(i)} y={height - 14} textAnchor="middle" className="fill-[#4a4455] text-[10px] font-semibold">{shortDate(p.date)}</text>
-        ))}
-        {lines.filter((l) => hasData(l.key)).map((l) => {
-          const pts = l.data.map((v, i) => (v !== null ? `${xPos(i)},${yPos(v)}` : null)).filter(Boolean).join(' ')
-          return (
-            <g key={l.key}>
-              <polyline points={pts} fill="none" stroke={l.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              {l.data.map((v, i) => v !== null ? (
-                <g key={`${l.key}-${i}`}>
-                  <circle cx={xPos(i)} cy={yPos(v)} r="5" fill="white" stroke={l.color} strokeWidth="2.5" />
-                  <title>{`${l.label} ${shortDate(points[i].date)}: ${v}%`}</title>
-                </g>
-              ) : null)}
+
+      {isSingle ? (
+        <div className="flex items-end justify-center gap-8 py-6">
+          {lines.filter((l) => hasData(l.key)).map((l) => {
+            const v = l.data[0]!
+            return (
+              <div key={l.key} className="text-center">
+                <div className="text-3xl font-bold" style={{ color: l.color }}>{v}%</div>
+                <div className="mt-1 text-xs text-on-surface-variant">{l.label}</div>
+                <div className="mt-2 mx-auto h-2 w-24 rounded-full bg-surface-container-high">
+                  <div className="h-full rounded-full" style={{ width: `${v}%`, backgroundColor: l.color }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" role="img" aria-label="Grafik perkembangan tracking harian">
+          {[0, 25, 50, 75, 100].map((v) => (
+            <g key={v}>
+              <line x1={pad.left} x2={width - pad.right} y1={yPos(v)} y2={yPos(v)} stroke="#E6DDEC" strokeDasharray={v === 0 ? undefined : '5 7'} />
+              <text x={pad.left - 10} y={yPos(v) + 4} textAnchor="end" className="fill-[#7b7487] text-[11px]">{v}</text>
             </g>
-          )
-        })}
-      </svg>
+          ))}
+          {points.map((p, i) => (
+            <text key={p.date} x={xPos(i)} y={height - 14} textAnchor="middle" className="fill-[#4a4455] text-[10px] font-semibold">{shortDate(p.date)}</text>
+          ))}
+          {lines.filter((l) => hasData(l.key)).map((l) => {
+            const pts = l.data.map((v, i) => (v !== null ? `${xPos(i)},${yPos(v)}` : null)).filter(Boolean).join(' ')
+            return (
+              <g key={l.key}>
+                <polyline points={pts} fill="none" stroke={l.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                {l.data.map((v, i) => v !== null ? (
+                  <g key={`${l.key}-${i}`}>
+                    <circle cx={xPos(i)} cy={yPos(v)} r="5" fill="white" stroke={l.color} strokeWidth="2.5" />
+                    <title>{`${l.label} ${shortDate(points[i].date)}: ${v}%`}</title>
+                  </g>
+                ) : null)}
+              </g>
+            )
+          })}
+        </svg>
+      )}
+
       <div className="mt-2 text-center text-[11px] text-on-surface-variant">Nilai rata-rata harian · target ideal 100%</div>
     </div>
   )
