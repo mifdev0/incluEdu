@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
-import { CalendarDays, CheckCircle2, ClipboardList, ListChecks, Pencil, Plus, Target, Users, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ClipboardList, FileDown, ListChecks, Pencil, Plus, Target, Users, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
@@ -38,6 +38,16 @@ const emptyGoalForm = {
   skor_total_target: '',
 }
 
+function validLongTermGoal(value: unknown) {
+  return typeof value === 'string' && value.trim() !== '' && value.trim() !== '[object Object]'
+}
+
+function buildLongTermGoalFromGoals(goals: PpiGoal[]) {
+  const areas = Array.from(new Set(goals.map((goal) => goal.area.split('·')[0].trim()).filter(Boolean))).slice(0, 4)
+  const focus = areas.length > 0 ? areas.join(', ') : 'akademik, sosial-emosional, dan kemandirian'
+  return `Mengembangkan kemampuan siswa pada area ${focus} secara bertahap, terukur, dan sesuai kebutuhan individual selama periode PPI.`
+}
+
 export default function PpiPage({ params }: { params: { id: string } }) {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -51,6 +61,12 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [dataLoading, setDataLoading] = useState(true)
   const [hasPpi, setHasPpi] = useState(false)
   const [ppiId, setPpiId] = useState('')
+  const [ppiStatus, setPpiStatus] = useState<'draft' | 'aktif' | 'selesai'>('draft')
+  const [approverName, setApproverName] = useState('')
+  const [approverRelation, setApproverRelation] = useState('Orang tua / wali')
+  const [approvalDate, setApprovalDate] = useState('')
+  const [approvalNote, setApprovalNote] = useState('')
+  const [approving, setApproving] = useState(false)
   const [goalModalOpen, setGoalModalOpen] = useState(false)
   const [savingGoal, setSavingGoal] = useState(false)
   const [goalError, setGoalError] = useState('')
@@ -71,14 +87,18 @@ export default function PpiPage({ params }: { params: { id: string } }) {
       supabase.from('assessment_responses').select('item_key, item_label, domain, nilai').eq('siswa_id', params.id).then(({ data }) => {
         setAssessmentResponses((data || []) as AssessmentResponseRow[])
       })
-      supabase.from('ppi').select('id, periode_mulai, periode_selesai, strategi, tujuan_jangka_panjang').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle().then(async ({ data }) => {
+      supabase.from('ppi').select('id, periode_mulai, periode_selesai, strategi, tujuan_jangka_panjang, status, nama_penyetuju, hubungan_penyetuju, tanggal_persetujuan, catatan_persetujuan').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle().then(async ({ data }) => {
         if (!data) {
           setDataLoading(false)
           return
         }
         setHasPpi(true)
         setPpiId(data.id)
-        setLongTermGoal(data.tujuan_jangka_panjang || '')
+        setPpiStatus(data.status || 'draft')
+        setApproverName(data.nama_penyetuju || '')
+        setApproverRelation(data.hubungan_penyetuju || 'Orang tua / wali')
+        setApprovalDate(data.tanggal_persetujuan || '')
+        setApprovalNote(data.catatan_persetujuan || '')
         setStrategies(Array.isArray(data.strategi) ? data.strategi as string[] : [])
         setPeriod(`${data.periode_mulai} – ${data.periode_selesai}`)
         setDaysUntilEvaluation(Math.max(0, Math.ceil((new Date(data.periode_selesai).getTime() - Date.now()) / 86400000)))
@@ -86,7 +106,15 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           supabase.from('tujuan_ppi').select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas, jenis_target, cp_id, fase_adaptasi, kriteria_tuntas, skor_benar_target, skor_total_target').eq('ppi_id', data.id).order('created_at'),
           supabase.from('curriculum_cp').select('id, mata_pelajaran, fase, jenjang, nama_elemen, deskripsi_cp, indikator_operasional').order('mata_pelajaran').order('fase'),
         ])
-        setGoals((goalRows || []) as PpiGoal[])
+        const loadedGoals = (goalRows || []) as PpiGoal[]
+        setGoals(loadedGoals)
+        if (validLongTermGoal(data.tujuan_jangka_panjang)) {
+          setLongTermGoal(data.tujuan_jangka_panjang)
+        } else {
+          const repairedGoal = buildLongTermGoalFromGoals(loadedGoals)
+          setLongTermGoal(repairedGoal)
+          await supabase.from('ppi').update({ tujuan_jangka_panjang: repairedGoal }).eq('id', data.id)
+        }
         setCpOptions((curriculumRows || []) as typeof cpOptions)
         setDataLoading(false)
       })
@@ -288,6 +316,30 @@ export default function PpiPage({ params }: { params: { id: string } }) {
     setAddingNonAcademic(false)
   }
 
+  async function approvePpi() {
+    if (!ppiId || !approverName.trim()) {
+      setGoalError('Nama orang tua atau wali yang menyetujui wajib diisi.')
+      return
+    }
+    setApproving(true)
+    setGoalError('')
+    const date = new Date().toISOString().slice(0, 10)
+    const { error } = await supabase.from('ppi').update({
+      status: 'aktif',
+      nama_penyetuju: approverName.trim(),
+      hubungan_penyetuju: approverRelation.trim() || 'Orang tua / wali',
+      tanggal_persetujuan: date,
+      catatan_persetujuan: approvalNote.trim() || null,
+    }).eq('id', ppiId)
+    setApproving(false)
+    if (error) {
+      setGoalError(error.message)
+      return
+    }
+    setPpiStatus('aktif')
+    setApprovalDate(date)
+  }
+
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
       <header className="app-header">
@@ -296,7 +348,9 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             <a href={`/dashboard/siswa/${params.id}`} className="font-label-md text-on-surface-variant">← <span className="hidden min-[390px]:inline">Profil</span></a>
             <a href="/dashboard"><BrandLogo compact mobileIconOnly /></a>
           </div>
-          <a href={`/dashboard/siswa/${params.id}/observasi`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Tracking harian</a>
+          {ppiStatus === 'aktif'
+            ? <a href={`/dashboard/siswa/${params.id}/observasi`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Tracking harian</a>
+            : <a href={`/dashboard/siswa/${params.id}/ppi/dokumen`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Tinjau dokumen</a>}
         </nav>
       </header>
 
@@ -308,7 +362,10 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               <h1 className="font-display text-[34px] md:text-display-lg">{displayName}</h1>
               <p className="text-white/75 mt-2">{period || 'Belum ada periode PPI'}</p>
             </div>
-            <button type="button" onClick={openNewGoal} disabled={!hasPpi} className="w-full md:w-auto px-5 py-3 rounded-full bg-white text-primary font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50"><Plus className="w-4 h-4" /> Tambah tujuan</button>
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+              <a href={`/dashboard/siswa/${params.id}/ppi/dokumen`} className="inline-flex items-center justify-center rounded-full bg-white/15 px-5 py-3 font-bold text-white"><FileDown className="mr-2 h-4 w-4" />Dokumen PPI</a>
+              <button type="button" onClick={openNewGoal} disabled={!hasPpi || ppiStatus === 'aktif'} className="px-5 py-3 rounded-full bg-white text-primary font-bold inline-flex items-center justify-center gap-2 disabled:opacity-50"><Plus className="w-4 h-4" /> Tambah tujuan</button>
+            </div>
           </div>
         </section>
 
@@ -331,6 +388,27 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             <p className="mt-2 text-lg font-bold leading-relaxed text-on-surface">{longTermGoal}</p>
           </section>
         )}
+
+        <section className={`mb-md rounded-3xl border p-5 sm:p-md ${ppiStatus === 'aktif' ? 'border-secondary/20 bg-[#E4F8EE]' : 'border-tertiary/20 bg-tertiary-fixed/25'}`}>
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+            <div>
+              <div className="text-xs font-bold text-primary">KONTRAK LAYANAN PPI</div>
+              <h2 className="mt-1 text-lg font-bold">{ppiStatus === 'aktif' ? 'PPI telah disetujui dan aktif' : 'PPI masih berupa draf'}</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-on-surface-variant">
+                {ppiStatus === 'aktif'
+                  ? `Disetujui oleh ${approverName} (${approverRelation}) pada ${approvalDate}. Tracking dapat dilaksanakan.`
+                  : 'Cetak atau tinjau dokumen bersama Tim PPI dan orang tua. Tracking dimulai setelah persetujuan orang tua dicatat.'}
+              </p>
+            </div>
+            <a href={`/dashboard/siswa/${params.id}/ppi/dokumen`} className="inline-flex shrink-0 items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-primary"><FileDown className="mr-2 h-4 w-4" />Cetak / PDF</a>
+          </div>
+          {ppiStatus !== 'aktif' && <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <label><span className="text-sm font-bold">Nama orang tua / wali</span><input value={approverName} onChange={(event) => setApproverName(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" placeholder="Nama lengkap penyetuju" /></label>
+            <label><span className="text-sm font-bold">Hubungan dengan siswa</span><input value={approverRelation} onChange={(event) => setApproverRelation(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" /></label>
+            <label className="md:col-span-2"><span className="text-sm font-bold">Catatan persetujuan (opsional)</span><textarea value={approvalNote} onChange={(event) => setApprovalNote(event.target.value)} rows={2} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" placeholder="Contoh: orang tua menyetujui dengan evaluasi ulang setelah tiga bulan." /></label>
+            <button type="button" onClick={approvePpi} disabled={approving || !approverName.trim()} className="md:col-span-2 rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{approving ? <LoadingSpinner label="Menyimpan persetujuan..." /> : 'Catat persetujuan dan aktifkan PPI'}</button>
+          </div>}
+        </section>
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-md items-start">
           <section className="space-y-4">
@@ -415,7 +493,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             <button
               type="button"
               onClick={openNewGoal}
-              disabled={!hasPpi}
+              disabled={!hasPpi || ppiStatus === 'aktif'}
               className="w-full py-4 rounded-full border-2 border-dashed border-primary/30 text-primary font-bold inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Plus className="w-5 h-5" />

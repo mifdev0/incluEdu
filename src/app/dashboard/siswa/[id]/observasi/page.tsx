@@ -25,6 +25,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
   const router = useRouter()
   const [studentName, setStudentName] = useState('Siswa')
   const [goals, setGoals] = useState<Goal[]>([])
+  const [ppiApproved, setPpiApproved] = useState(false)
   const [goalIndex, setGoalIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [correct, setCorrect] = useState('')
@@ -43,12 +44,13 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
     async function load() {
       const [studentResult, ppiResult, trackingResult] = await Promise.all([
         supabase.from('siswa').select('nama').eq('id', params.id).single(),
-        supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('ppi').select('id, status').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('daily_tracking').select('sesi_ke').eq('siswa_id', params.id).order('sesi_ke', { ascending: false }).limit(1),
       ])
       setStudentName(studentResult.data?.nama || 'Siswa')
       setSessionNumber(Number(trackingResult.data?.[0]?.sesi_ke || 0) + 1)
       if (ppiResult.data) {
+        setPpiApproved(ppiResult.data.status === 'aktif')
         const { data } = await supabase.from('tujuan_ppi')
           .select('id, area, tujuan, indikator, target, jenis_target, kriteria_tuntas, langkah_tugas')
           .eq('ppi_id', ppiResult.data.id)
@@ -70,6 +72,8 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
   const allAnswered = steps.every((_, index) => answers[`${currentGoal?.id}_${index}`])
 
   if (authLoading || !user || loading) return <FullPageLoading label="Menyiapkan tracking harian..." />
+
+  if (!ppiApproved) return <div className="min-h-screen grid place-items-center bg-[#FAFAF5] p-4 text-center"><div className="max-w-lg rounded-3xl border bg-white p-6"><h1 className="text-xl font-bold">PPI belum disetujui</h1><p className="mt-2 text-sm text-on-surface-variant">Dokumen PPI perlu ditinjau dan mendapat persetujuan orang tua sebelum tracking dimulai.</p><a href={`/dashboard/siswa/${params.id}/ppi`} className="mt-4 inline-flex rounded-full bg-primary px-5 py-3 font-bold text-white">Buka kontrak layanan PPI</a></div></div>
 
   async function saveGoalTracking() {
     if (!currentGoal || !user || !allAnswered) return

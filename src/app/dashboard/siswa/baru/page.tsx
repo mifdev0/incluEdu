@@ -41,6 +41,19 @@ type AiSummary = {
   rekomendasi_fase: PhaseRecommendation[]
 }
 
+function normalizeLongTermGoal(value: unknown): string {
+  if (typeof value === 'string' && value.trim() !== '[object Object]') return value.trim()
+  if (Array.isArray(value)) return value.map(normalizeLongTermGoal).filter(Boolean).join(' ')
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    for (const key of ['tujuan', 'deskripsi', 'target', 'ringkasan', 'goal']) {
+      const normalized = normalizeLongTermGoal(record[key])
+      if (normalized) return normalized
+    }
+  }
+  return ''
+}
+
 export default function TambahSiswaPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -246,7 +259,8 @@ export default function TambahSiswaPage() {
         siswa_id: studentId,
         periode_mulai: start.toISOString().slice(0, 10),
         periode_selesai: end.toISOString().slice(0, 10),
-        tujuan_jangka_panjang: draft.tujuan_jangka_panjang,
+        tujuan_jangka_panjang: normalizeLongTermGoal(draft.tujuan_jangka_panjang)
+          || `Mengembangkan kemampuan akademik dan kemandirian ${nama.trim()} secara bertahap sesuai hasil asesmen selama periode PPI.`,
         strategi: draft.strategi || [],
         tim: teamRows,
         status: 'draft',

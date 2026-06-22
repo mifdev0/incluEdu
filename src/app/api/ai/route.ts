@@ -6,6 +6,20 @@ import { ACCOMMODATION_OPTIONS, recommendedAccommodations } from '@/lib/accommod
 
 export const runtime = 'nodejs'
 
+function normalizeLongTermGoal(value: unknown): string {
+  if (typeof value === 'string') return value.trim()
+  if (Array.isArray(value)) return value.map(normalizeLongTermGoal).filter(Boolean).join(' ')
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    for (const key of ['tujuan', 'deskripsi', 'target', 'ringkasan', 'goal']) {
+      const normalized = normalizeLongTermGoal(record[key])
+      if (normalized) return normalized
+    }
+    return Object.values(record).map(normalizeLongTermGoal).filter(Boolean).join(' ')
+  }
+  return ''
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -55,7 +69,7 @@ Kembalikan JSON dengan kategori, keyakinan, alasan singkat, 2-4 pertanyaan_lanju
         'Kamu membantu guru menyusun draf Program Pembelajaran Individual sesuai prinsip PPI Kemendikbudristek 2021. Tujuan harus individual, spesifik, terukur, realistis, berdasarkan kekuatan dan kemampuan awal. AI hanya menyusun draf yang wajib ditinjau guru.',
         `Profil siswa: ${JSON.stringify(body.student)}
 Asesmen awal: ${JSON.stringify(body.baseline)}
-Susun satu tujuan jangka panjang, 3-5 tujuan jangka pendek, dan strategi pembelajaran.
+Susun satu tujuan jangka panjang, 3-5 tujuan jangka pendek, dan strategi pembelajaran. Nilai tujuan_jangka_panjang WAJIB berupa satu string/kalimat, bukan object atau array.
 WAJIB sertakan minimal satu target non_akademik berdasarkan kebutuhan sikap belajar, sosial-emosional, bina diri, atau motorik pada asesmen. Target akademik dan non-akademik harus dipisahkan.
 Untuk target akademik, ikuti rekomendasi fase kemampuan pada input meskipun berbeda dari fase kelas administratif.
 Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akademik), mata_pelajaran, fase_adaptasi, elemen_cp, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati.`
@@ -84,7 +98,7 @@ Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akade
         })
         .filter((goal) => goal.tujuan.length > 0)
       return NextResponse.json({
-        tujuan_jangka_panjang: String(result.tujuan_jangka_panjang || ''),
+        tujuan_jangka_panjang: normalizeLongTermGoal(result.tujuan_jangka_panjang),
         tujuan_jangka_pendek: goals,
         strategi: Array.isArray(result.strategi) ? result.strategi.map(String) : [],
       })
