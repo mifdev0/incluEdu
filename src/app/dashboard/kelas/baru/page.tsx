@@ -10,8 +10,9 @@ import { FullPageLoading } from '@/components/loading-state'
 export default function KelasBaruPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const [nama, setNama] = useState('')
-  const [jenjang, setJenjang] = useState('SMP')
+  const [jenjang, setJenjang] = useState('SD')
+  const [tingkat, setTingkat] = useState(1)
+  const [rombel, setRombel] = useState('A')
   const currentYear = new Date().getFullYear()
   const defaultAcademicYear = new Date().getMonth() < 6 ? `${currentYear - 1}/${currentYear}` : `${currentYear}/${currentYear + 1}`
   const [tahunAjaran, setTahunAjaran] = useState(defaultAcademicYear)
@@ -26,10 +27,12 @@ export default function KelasBaruPage() {
     if (!user) return
     setSaving(true)
     setError('')
+    const nama = `Kelas ${tingkat}${rombel.trim() ? ` ${rombel.trim().toUpperCase()}` : ''}`
     const { error: insertError } = await supabase.from('kelas').insert({
       guru_id: user.id,
-      nama: nama.trim(),
+      nama,
       jenjang,
+      tingkat,
       tahun_ajaran: tahunAjaran.trim(),
     })
     setSaving(false)
@@ -52,29 +55,39 @@ export default function KelasBaruPage() {
       </header>
 
       <main className="pt-24 sm:pt-28 max-w-3xl mx-auto px-4 sm:px-gutter pb-xl">
-        <h2 className="font-headline-md text-headline-md text-on-surface mb-2">Buat Kelompok Pendampingan</h2>
-        <p className="text-on-surface-variant mb-lg">Kelompokkan siswa berdasarkan kelas atau jadwal pendampingan agar pemantauan lebih mudah.</p>
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-2">Buat Kelas</h2>
+        <p className="text-on-surface-variant mb-lg">Masukkan jenjang, tingkat kelas, dan rombel. Data ini menentukan fase asesmen siswa secara otomatis.</p>
 
         <form onSubmit={handleSubmit} className="space-y-lg">
           <div className="bg-surface rounded-3xl p-5 sm:p-lg border border-outline-variant/20 hard-shadow space-y-md">
             <h3 className="font-headline-sm text-headline-sm text-on-surface">Informasi Kelas</h3>
-            <div>
-              <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Nama Kelas</label>
-              <input type="text" value={nama} onChange={e => setNama(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Nama kelas" required />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Jenjang</label>
-                <select value={jenjang} onChange={e => setJenjang(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low">
+                <select value={jenjang} onChange={e => {
+                  const nextLevel = e.target.value
+                  setJenjang(nextLevel)
+                  setTingkat(nextLevel === 'SD' ? 1 : nextLevel === 'SMP' ? 7 : 10)
+                }} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low">
                   <option value="SD">SD</option>
                   <option value="SMP">SMP</option>
                   <option value="SMA">SMA</option>
                 </select>
               </div>
               <div>
+                <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Tingkat kelas</label>
+                <select value={tingkat} onChange={e => setTingkat(Number(e.target.value))} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low">
+                  {(jenjang === 'SD' ? [1, 2, 3, 4, 5, 6] : jenjang === 'SMP' ? [7, 8, 9] : [10, 11, 12]).map((value) => <option key={value} value={value}>Kelas {value}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Rombel</label>
+                <input type="text" value={rombel} onChange={e => setRombel(e.target.value)} maxLength={10} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Contoh: A" />
+              </div>
+            </div>
+            <div>
                 <label className="block text-on-surface-variant font-label-md text-label-md mb-1.5">Tahun Ajaran</label>
                 <input type="text" value={tahunAjaran} onChange={e => setTahunAjaran(e.target.value)} className="w-full px-5 py-3.5 rounded-full border border-outline-variant/40 text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-surface-container-low" placeholder="Contoh: 2026/2027" />
-              </div>
             </div>
           </div>
 

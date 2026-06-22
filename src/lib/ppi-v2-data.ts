@@ -204,8 +204,8 @@ export function recommendCurriculumPhases(
   })
 }
 
-export function expectedPhaseFromClass(className: string, level: string): CurriculumPhase | null {
-  const number = Number(className.match(/\d+/)?.[0])
+export function expectedPhaseFromClass(className: string, level: string, grade?: number | null): CurriculumPhase | null {
+  const number = grade || Number(className.match(/\d+/)?.[0])
   if (level === 'SD') {
     if (number >= 5) return 'C'
     if (number >= 3) return 'B'

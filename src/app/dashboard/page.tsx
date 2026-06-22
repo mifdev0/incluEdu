@@ -104,7 +104,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-lg">
           {[
-            { label: 'Kelompok pendampingan', value: kelasData.length, icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
+            { label: 'Kelas pendampingan', value: kelasData.length, icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
             { label: 'Siswa didampingi', value: totalSiswa, icon: UsersRound, color: 'text-secondary', bg: 'bg-secondary-container/40' },
             { label: 'Tujuan PPI aktif', value: activeGoals, icon: FileCheck2, color: 'text-cyan-700', bg: 'bg-cyan-100' },
             { label: 'Tracking minggu ini', value: observasiMingguIni, icon: ClipboardCheck, color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
@@ -125,8 +125,8 @@ export default function DashboardPage() {
           <section>
             <div className="flex items-end justify-between mb-md">
               <div>
-                <h2 className="font-headline-sm text-headline-sm text-on-surface">Kelompok siswa</h2>
-                <p className="text-on-surface-variant text-sm mt-1">Pilih kelompok untuk membuka profil, PPI, dan perkembangan siswa.</p>
+                <h2 className="font-headline-sm text-headline-sm text-on-surface">Kelas siswa</h2>
+                <p className="text-on-surface-variant text-sm mt-1">Pilih kelas untuk membuka profil, PPI, dan perkembangan siswa.</p>
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-md">
@@ -159,7 +159,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <a href={`/dashboard/kelas/${kelas.id}`} className="flex w-full items-center justify-between py-3 px-4 bg-white/70 hover:bg-white rounded-full font-label-md text-label-md text-on-surface transition-colors">
-                  Buka kelompok
+                  Buka kelas
                   <ArrowRight className="w-4 h-4" />
                 </a>
               </article>
@@ -186,7 +186,7 @@ export default function DashboardPage() {
               ))}
             </div>
             <a href="/dashboard/kelas/baru" className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-surface-container-high px-4 py-3 text-sm font-bold text-on-surface hover:bg-surface-container-highest">
-              <Plus className="w-4 h-4" /> Buat kelompok baru
+              <Plus className="w-4 h-4" /> Buat kelas baru
             </a>
           </aside>
         </div>

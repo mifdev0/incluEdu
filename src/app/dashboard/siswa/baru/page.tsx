@@ -9,7 +9,6 @@ import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
 import { supabase } from '@/lib/supabase'
 import {
   ASSESSMENT_SCALE,
-  CURRICULUM_PHASES,
   PHASE_DESCRIPTIONS,
   TEAM_ROLES,
   buildNonAcademicGoal,
@@ -17,7 +16,6 @@ import {
   getAssessmentItemsForPhase,
   recommendCurriculumPhases,
   type AssessmentValue,
-  type CurriculumPhase,
   type PhaseRecommendation,
 } from '@/lib/ppi-v2-data'
 
@@ -47,7 +45,7 @@ export default function TambahSiswaPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [step, setStep] = useState(1)
-  const [classes, setClasses] = useState<Array<{ id: string; nama: string; jenjang: string; tahun_ajaran: string }>>([])
+  const [classes, setClasses] = useState<Array<{ id: string; nama: string; jenjang: string; tingkat: number | null; tahun_ajaran: string }>>([])
   const [nama, setNama] = useState('')
   const [kelasId, setKelasId] = useState('')
   const [kategori, setKategori] = useState('')
@@ -56,8 +54,6 @@ export default function TambahSiswaPage() {
   const [classification, setClassification] = useState<{ kategori: string; alasan: string; pertanyaan_lanjutan: string[] } | null>(null)
   const [team, setTeam] = useState<Record<string, string>>({ guru_kelas: user?.nama || '' })
   const [assessment, setAssessment] = useState<Record<string, AssessmentValue>>({})
-  const [academicPhase, setAcademicPhase] = useState<CurriculumPhase>('A')
-  const [phaseManuallyChanged, setPhaseManuallyChanged] = useState(false)
   const [summary, setSummary] = useState<AiSummary | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [summarizing, setSummarizing] = useState(false)
@@ -68,25 +64,18 @@ export default function TambahSiswaPage() {
     if (!loading && !user) router.push('/login')
     if (!user) return
     setTeam((current) => ({ ...current, guru_kelas: current.guru_kelas || user.nama }))
-    supabase.from('kelas').select('id, nama, jenjang, tahun_ajaran').order('created_at').then(({ data }) => setClasses(data || []))
+    supabase.from('kelas').select('id, nama, jenjang, tingkat, tahun_ajaran').order('tingkat').order('nama').then(({ data }) => setClasses(data || []))
   }, [user, loading, router])
 
+  const selectedClass = classes.find((item) => item.id === kelasId)
+  const expectedPhase = selectedClass ? expectedPhaseFromClass(selectedClass.nama, selectedClass.jenjang, selectedClass.tingkat) : null
+  const academicPhase = expectedPhase || 'A'
   const activeAssessmentItems = useMemo(() => getAssessmentItemsForPhase(academicPhase), [academicPhase])
   const groups = useMemo(() => Array.from(new Set(activeAssessmentItems.map((item) => item.group))), [activeAssessmentItems])
   const requiredTeamComplete = ['guru_kelas', 'orang_tua', 'kepala_sekolah'].every((role) => team[role]?.trim())
   const identityComplete = nama.trim() && kelasId && kategori && requiredTeamComplete
   const assessmentComplete = activeAssessmentItems.every((item) => assessment[item.key])
   const phaseRecommendations = recommendCurriculumPhases(assessment, academicPhase)
-  const selectedClass = classes.find((item) => item.id === kelasId)
-  const expectedPhase = selectedClass ? expectedPhaseFromClass(selectedClass.nama, selectedClass.jenjang) : null
-  const academicAnswers = activeAssessmentItems.filter((item) => item.domain === 'akademik' && assessment[item.key])
-  const needsLowerLevel = academicPhase !== 'A'
-    && academicAnswers.length === activeAssessmentItems.filter((item) => item.domain === 'akademik').length
-    && academicAnswers.filter((item) => assessment[item.key] === 'butuh_bantuan' || assessment[item.key] === 'belum_bisa').length >= 6
-
-  useEffect(() => {
-    if (expectedPhase && !phaseManuallyChanged) setAcademicPhase(expectedPhase)
-  }, [expectedPhase, phaseManuallyChanged])
 
   if (loading || !user) return <FullPageLoading label="Menyiapkan formulir PPI..." />
 
@@ -373,28 +362,16 @@ export default function TambahSiswaPage() {
 
         {step === 2 && <div className="space-y-4">
           <section className="rounded-3xl border border-primary/15 bg-primary/5 p-5 sm:p-6">
-            <div className="text-xs font-bold text-primary">LEVEL ASESMEN AKADEMIK</div>
-            <h2 className="mt-1 text-lg font-bold">Kemampuan fase mana yang sedang diuji?</h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Sistem memulai dari fase berdasarkan kelas. Pilih fase lebih dasar jika pertanyaannya terlalu sulit, atau fase lebih tinggi jika seluruh kemampuan sudah dikuasai.
-            </p>
-            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {CURRICULUM_PHASES.map((phase) => <button
-                key={phase}
-                type="button"
-                onClick={() => {
-                  setAcademicPhase(phase)
-                  setPhaseManuallyChanged(true)
-                  setSummary(null)
-                }}
-                className={`rounded-2xl border px-3 py-3 text-sm font-bold ${academicPhase === phase ? 'border-primary bg-primary text-white' : 'border-outline-variant/25 bg-white'}`}
-              >
-                Fase {phase}
-              </button>)}
+            <div className="text-xs font-bold text-primary">FASE ASESMEN OTOMATIS</div>
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-bold">Asesmen akademik Fase {academicPhase}</h2>
+              <span className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-white">{selectedClass?.nama}</span>
             </div>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              Fase dipilih otomatis dari tingkat kelas siswa dan tidak perlu ditentukan kembali oleh guru.
+            </p>
             <p className="mt-3 text-xs text-on-surface-variant">
               {PHASE_DESCRIPTIONS[academicPhase]}
-              {expectedPhase && <> Fase berdasarkan kelas siswa: <strong>{expectedPhase}</strong>.</>}
             </p>
             <p className="mt-2 rounded-2xl bg-white/80 px-4 py-3 text-xs leading-relaxed text-on-surface-variant">
               Asesmen awal berfokus pada fondasi membaca, menulis, dan matematika. Mata pelajaran lain dipilih pada halaman PPI melalui database Capaian Pembelajaran, lalu targetnya disesuaikan dengan hasil asesmen ini.
@@ -413,21 +390,6 @@ export default function TambahSiswaPage() {
               </div>)}
             </div>
           </section>)}
-          {needsLowerLevel && <section className="rounded-3xl border border-tertiary/20 bg-tertiary-fixed/25 p-5">
-            <h2 className="font-bold">Pertanyaan Fase {academicPhase} tampaknya terlalu sulit</h2>
-            <p className="mt-1 text-sm text-on-surface-variant">Banyak kemampuan akademik masih membutuhkan bantuan atau belum terlihat. Uji satu fase lebih dasar agar titik awal siswa lebih akurat.</p>
-            <button
-              type="button"
-              onClick={() => {
-                const lowerPhase = CURRICULUM_PHASES[Math.max(0, CURRICULUM_PHASES.indexOf(academicPhase) - 1)]
-                setAcademicPhase(lowerPhase)
-                setPhaseManuallyChanged(true)
-              }}
-              className="mt-3 rounded-full bg-tertiary px-5 py-3 text-sm font-bold text-white"
-            >
-              Uji Fase {CURRICULUM_PHASES[Math.max(0, CURRICULUM_PHASES.indexOf(academicPhase) - 1)]}
-            </button>
-          </section>}
           <div className="grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setStep(1)} className="rounded-full bg-surface-container-high py-4 font-bold">Kembali</button><button type="button" disabled={!assessmentComplete || summarizing} onClick={summarizeAssessment} className="rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{summarizing ? <LoadingSpinner label="Meringkas asesmen..." /> : 'Analisis hasil asesmen'}</button></div>
         </div>}
 

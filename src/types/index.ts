@@ -21,6 +21,7 @@ export interface Kelas {
   guru_id: string
   nama: string
   jenjang: 'SD' | 'SMP' | 'SMA'
+  tingkat?: number | null
   tahun_ajaran: string
   created_at: string
 }

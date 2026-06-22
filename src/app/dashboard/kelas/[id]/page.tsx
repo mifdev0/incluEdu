@@ -14,7 +14,7 @@ type Student = { id: string; nama: string; kategori: string; tracking: number; a
 export default function DetailKelasPage({ params }: { params: { id: string } }) {
   const { user, loading: authLoading, logout } = useAuth()
   const router = useRouter()
-  const [kelas, setKelas] = useState<{ id: string; nama: string; jenjang: string; tahun_ajaran: string } | null>(null)
+  const [kelas, setKelas] = useState<{ id: string; nama: string; jenjang: string; tingkat: number | null; tahun_ajaran: string } | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'student' | 'class'; id: string; name: string } | null>(null)
@@ -26,7 +26,7 @@ export default function DetailKelasPage({ params }: { params: { id: string } }) 
     if (!user) return
     async function load() {
       const [classResult, studentsResult] = await Promise.all([
-        supabase.from('kelas').select('id, nama, jenjang, tahun_ajaran').eq('id', params.id).single(),
+        supabase.from('kelas').select('id, nama, jenjang, tingkat, tahun_ajaran').eq('id', params.id).single(),
         supabase.from('siswa').select('id, nama, kategori').eq('kelas_id', params.id).order('created_at'),
       ])
       setKelas(classResult.data)
