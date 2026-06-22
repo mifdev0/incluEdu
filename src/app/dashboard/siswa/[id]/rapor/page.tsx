@@ -111,10 +111,20 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Narasi evaluasi belum berhasil dibuat.')
+      const fallbackGuru = [
+        'Fokus pada penguatan area yang masih di bawah target secara bertahap.',
+        'Gunakan variasi media pembelajaran untuk menjaga minat dan konsentrasi siswa.',
+        'Libatkan siswa dalam aktivitas yang mengembangkan kemandirian dan kepercayaan diri.',
+      ]
+      const fallbackOrtu = [
+        'Dampingi anak saat mengulang pelajaran di rumah dengan suasana yang menyenangkan.',
+        'Berikan penguatan positif setiap kali anak menunjukkan kemajuan, sekecil apa pun.',
+        'Komunikasikan dengan guru secara berkala untuk memantau perkembangan anak.',
+      ]
       setAnalysis({
         ringkasan_semester: result.ringkasan_semester,
-        rekomendasi_guru: result.rekomendasi_guru || [],
-        rekomendasi_orang_tua: result.rekomendasi_orang_tua || [],
+        rekomendasi_guru: Array.isArray(result.rekomendasi_guru) && result.rekomendasi_guru.length > 0 ? result.rekomendasi_guru : fallbackGuru,
+        rekomendasi_orang_tua: Array.isArray(result.rekomendasi_orang_tua) && result.rekomendasi_orang_tua.length > 0 ? result.rekomendasi_orang_tua : fallbackOrtu,
       })
       const map: Record<string, { narrative: string; recommendation: 'lanjut' | 'remedial' }> = {}
       for (const item of result.evaluasi_target || []) map[item.tujuan_id] = { narrative: item.narasi, recommendation: item.rekomendasi }
@@ -150,11 +160,12 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
   }
 
   return <div className="min-h-screen bg-[#FAFAF5] print:bg-white">
+    {generating && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/50 backdrop-blur-sm"><div className="rounded-3xl bg-white p-8 text-center shadow-2xl"><LoadingSpinner label="Menyusun evaluasi..." /><p className="mt-4 text-sm text-on-surface-variant">AI sedang menganalisis data tracking dan menyusun narasi.</p></div></div>}
     <header className="app-header print:hidden"><nav className="app-nav"><a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant">← Profil</a><BrandLogo compact mobileIconOnly /></nav></header>
     <main className="mx-auto max-w-4xl px-4 pb-20 pt-24 sm:pt-28 print:pt-0">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div><div className="text-xs font-bold text-primary">EVALUASI PROGRAM PEMBELAJARAN INDIVIDUAL</div><h1 className="mt-1 text-3xl font-bold">{student?.nama}</h1><p className="mt-1 text-on-surface-variant">Periode {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</p></div>
-        <div className="flex gap-2 print:hidden"><button onClick={generate} disabled={generating || tracking.length === 0} className="rounded-full bg-primary px-5 py-3 font-bold text-white disabled:opacity-40">{generating ? <LoadingSpinner label="Menyusun..." /> : <><Sparkles className="mr-2 inline h-4 w-4" />Buat narasi</>}</button><button onClick={() => window.print()} className="rounded-full bg-surface-container-high px-5 py-3 font-bold"><FileDown className="mr-2 inline h-4 w-4" />Cetak / PDF</button></div>
+        <div className="flex gap-2 print:hidden"><button onClick={generate} disabled={generating || tracking.length === 0} className="rounded-full bg-primary px-5 py-3 font-bold text-white disabled:opacity-40"><Sparkles className="mr-2 inline h-4 w-4" />Buat narasi</button><button onClick={() => window.print()} className="rounded-full bg-surface-container-high px-5 py-3 font-bold"><FileDown className="mr-2 inline h-4 w-4" />Cetak / PDF</button></div>
       </div>
       {error && <div className="mt-4 rounded-2xl bg-error-container p-4 text-sm text-error">{error}</div>}
       {tracking.length === 0 && <div className="mt-6 rounded-3xl border-2 border-dashed bg-white p-8 text-center"><h2 className="font-bold">Belum ada tracking harian</h2><p className="mt-1 text-sm text-on-surface-variant">Rekomendasi penilaian dan evaluasi akan muncul setelah guru mencatat pelaksanaan target.</p></div>}
