@@ -31,6 +31,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
   const [total, setTotal] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sessionNumber, setSessionNumber] = useState(1)
   const [saving, setSaving] = useState(false)
   const [completed, setCompleted] = useState(false)
   const [error, setError] = useState('')
@@ -40,16 +41,17 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
     if (!authLoading && !user) router.push('/login')
     if (!user) return
     async function load() {
-      const [studentResult, ppiResult] = await Promise.all([
+      const [studentResult, ppiResult, trackingResult] = await Promise.all([
         supabase.from('siswa').select('nama').eq('id', params.id).single(),
         supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('daily_tracking').select('sesi_ke').eq('siswa_id', params.id).order('sesi_ke', { ascending: false }).limit(1),
       ])
       setStudentName(studentResult.data?.nama || 'Siswa')
+      setSessionNumber(Number(trackingResult.data?.[0]?.sesi_ke || 0) + 1)
       if (ppiResult.data) {
         const { data } = await supabase.from('tujuan_ppi')
           .select('id, area, tujuan, indikator, target, jenis_target, kriteria_tuntas, langkah_tugas')
           .eq('ppi_id', ppiResult.data.id)
-          .in('status', ['belum_dimulai', 'berkembang', 'hampir_tercapai'])
           .order('created_at')
         setGoals((data || []) as Goal[])
       }
@@ -82,6 +84,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
       tujuan_ppi_id: currentGoal.id,
       guru_id: user.id,
       tanggal: new Date().toISOString().slice(0, 10),
+      sesi_ke: sessionNumber,
       langkah_index: index,
       langkah_label: step,
       kode_bantuan: answers[`${currentGoal.id}_${index}`],
@@ -145,16 +148,31 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
 
   if (completed) return <div className="min-h-screen bg-[#FAFAF5] grid place-items-center p-4"><div className="w-full max-w-xl rounded-3xl bg-white p-6 text-center border">
     <CheckCircle2 className="mx-auto h-12 w-12 text-secondary" />
-    <h1 className="mt-4 text-2xl font-bold">Tracking hari ini tersimpan</h1>
-    <p className="mt-2 text-on-surface-variant">Capaian setiap target {studentName} telah diperbarui.</p>
+    <div className="mt-4 text-xs font-bold text-primary">TRACKING {sessionNumber} SELESAI</div>
+    <h1 className="mt-1 text-2xl font-bold">Semua target sudah dicatat</h1>
+    <p className="mt-2 text-on-surface-variant">Capaian setiap target {studentName} telah diperbarui. Anda dapat langsung melanjutkan ke sesi berikutnya.</p>
     {alerts.map((alert) => <div key={alert.goal} className="mt-4 rounded-2xl bg-tertiary-fixed/30 p-4 text-left"><div className="flex gap-2 font-bold"><AlertTriangle className="h-5 w-5 text-tertiary" />Strategi perlu ditinjau</div><p className="mt-2 text-sm">{alert.summary}</p><ul className="mt-2 text-sm list-disc pl-5">{alert.suggestions.map((item) => <li key={item}>{item}</li>)}</ul></div>)}
-    <a href={`/dashboard/siswa/${params.id}`} className="mt-5 inline-flex rounded-full bg-primary px-6 py-3 font-bold text-white">Lihat perkembangan</a>
+    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <a href={`/dashboard/siswa/${params.id}`} className="inline-flex items-center justify-center rounded-full bg-surface-container-high px-6 py-3 font-bold">Lihat perkembangan</a>
+      <button type="button" onClick={() => {
+        setSessionNumber((current) => current + 1)
+        setGoalIndex(0)
+        setAnswers({})
+        setCorrect('')
+        setTotal('')
+        setNote('')
+        setAlerts([])
+        setCompleted(false)
+      }} className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 font-bold text-white">
+        Lanjut Tracking {sessionNumber + 1}<ArrowRight className="ml-2 h-4 w-4" />
+      </button>
+    </div>
   </div></div>
 
   return <div className="min-h-screen bg-[#FAFAF5]">
     <header className="app-header"><nav className="app-nav"><a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant">← Profil</a><BrandLogo compact mobileIconOnly /><span className="text-sm font-bold text-primary">{goalIndex + 1}/{goals.length} target</span></nav></header>
     <main className="mx-auto max-w-3xl px-4 pb-20 pt-24 sm:pt-28">
-      <div className="mb-5"><div className="text-xs font-bold text-primary">TRACKING HARIAN</div><h1 className="mt-1 text-3xl font-bold">{studentName}</h1><p className="mt-1 text-on-surface-variant">Catat bantuan yang benar-benar dibutuhkan hari ini.</p></div>
+      <div className="mb-5"><div className="text-xs font-bold text-primary">TRACKING {sessionNumber}</div><h1 className="mt-1 text-3xl font-bold">{studentName}</h1><p className="mt-1 text-on-surface-variant">Selesaikan seluruh target untuk menutup Tracking {sessionNumber}.</p></div>
       <section className="rounded-3xl border border-outline-variant/20 bg-white p-5 sm:p-6">
         <div className="flex flex-wrap gap-2"><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{currentGoal.jenis_target === 'akademik' ? 'Akademik' : 'Non-akademik'}</span><span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">{currentGoal.area}</span></div>
         <h2 className="mt-3 text-xl font-bold">{currentGoal.tujuan}</h2>
@@ -172,7 +190,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
         {currentGoal.jenis_target === 'akademik' && <div className="mt-6 rounded-2xl bg-primary/5 p-4"><div className="font-bold">Hasil tugas atau soal</div><p className="mt-1 text-xs text-on-surface-variant">Nilai angka dihitung otomatis dari jawaban benar ÷ total soal.</p><div className="mt-3 grid grid-cols-2 gap-3"><label><span className="text-sm font-bold">Benar</span><input type="number" min="0" value={correct} onChange={(event) => setCorrect(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" /></label><label><span className="text-sm font-bold">Total</span><input type="number" min="1" value={total} onChange={(event) => setTotal(event.target.value)} className="mt-2 w-full rounded-2xl border bg-white px-4 py-3" /></label></div></div>}
         <label className="mt-5 block"><span className="text-sm font-bold">Catatan singkat (opsional)</span><textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" placeholder="Situasi penting saat kegiatan berlangsung..." /></label>
         {error && <div className="mt-4 rounded-2xl bg-error-container p-3 text-sm text-error">{error}</div>}
-        <button type="button" onClick={saveGoalTracking} disabled={!allAnswered || saving} className="mt-5 w-full rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{saving ? <LoadingSpinner label="Menyimpan..." /> : goalIndex < goals.length - 1 ? <>Simpan dan lanjut <ArrowRight className="ml-2 inline h-4 w-4" /></> : 'Simpan tracking hari ini'}</button>
+        <button type="button" onClick={saveGoalTracking} disabled={!allAnswered || saving} className="mt-5 w-full rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{saving ? <LoadingSpinner label="Menyimpan..." /> : goalIndex < goals.length - 1 ? <>Simpan dan lanjut target berikutnya <ArrowRight className="ml-2 inline h-4 w-4" /></> : `Selesaikan Tracking ${sessionNumber}`}</button>
       </section>
     </main>
   </div>

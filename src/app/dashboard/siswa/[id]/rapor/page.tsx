@@ -23,6 +23,7 @@ type Goal = {
 type Tracking = {
   tujuan_ppi_id: string
   tanggal: string
+  sesi_ke: number
   kode_bantuan: string
   benar: number | null
   total: number | null
@@ -56,7 +57,7 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
       const [studentResult, ppiResult, trackingResult, teamResult] = await Promise.all([
         supabase.from('siswa').select('nama, kategori, status_diagnosis, kelas(nama, jenjang, tingkat)').eq('id', params.id).single(),
         supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('daily_tracking').select('tujuan_ppi_id, tanggal, kode_bantuan, benar, total').eq('siswa_id', params.id).order('tanggal'),
+        supabase.from('daily_tracking').select('tujuan_ppi_id, tanggal, sesi_ke, kode_bantuan, benar, total').eq('siswa_id', params.id).order('sesi_ke'),
         supabase.from('ppi_teams').select('nama, peran').eq('siswa_id', params.id),
       ])
       setStudent(studentResult.data)
@@ -81,11 +82,11 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
     const logs = tracking.filter((item) => item.tujuan_ppi_id === goal.id)
     let value = 0
     if (goal.jenis_target === 'akademik') {
-      const byDate = new Map<string, { benar: number; total: number }>()
+      const bySession = new Map<number, { benar: number; total: number }>()
       logs.forEach((item) => {
-        if (item.benar !== null && item.total) byDate.set(item.tanggal, { benar: item.benar, total: item.total })
+        if (item.benar !== null && item.total) bySession.set(item.sesi_ke, { benar: item.benar, total: item.total })
       })
-      const attempts = Array.from(byDate.values())
+      const attempts = Array.from(bySession.values())
       const correct = attempts.reduce((sum, item) => sum + item.benar, 0)
       const total = attempts.reduce((sum, item) => sum + item.total, 0)
       value = total ? Math.round((correct / total) * 100) : 0

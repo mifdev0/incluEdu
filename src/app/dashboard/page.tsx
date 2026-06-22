@@ -27,7 +27,7 @@ export default function DashboardPage() {
         supabase.from('kelas').select('id, nama, jenjang').order('created_at'),
         supabase.from('siswa').select('id, nama, kelas_id, daily_tracking(tanggal)'),
         supabase.from('tujuan_ppi').select('id, ppi!inner(siswa!inner(guru_id))').neq('status', 'tercapai'),
-        supabase.from('daily_tracking').select('id, siswa_id, siswa!inner(kelas_id)').gte('tanggal', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
+        supabase.from('daily_tracking').select('id, siswa_id, sesi_ke, siswa!inner(kelas_id)').gte('tanggal', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)),
       ]).then(([classesResult, studentsResult, goalsResult, observationsResult]) => {
         const students = studentsResult.data || []
         const observations = observationsResult.data || []
@@ -41,7 +41,9 @@ export default function DashboardPage() {
           return {
             ...item,
             siswa: classStudents.length,
-            tracking: observations.filter((observation) => (observation.siswa as unknown as { kelas_id: string })?.kelas_id === item.id).length,
+            tracking: new Set(observations
+              .filter((observation) => (observation.siswa as unknown as { kelas_id: string })?.kelas_id === item.id)
+              .map((observation) => `${observation.siswa_id}_${observation.sesi_ke}`)).size,
             namaSiswa: classStudents.slice(0, 3).map((student) => student.nama),
             ...colors[index % colors.length],
           }

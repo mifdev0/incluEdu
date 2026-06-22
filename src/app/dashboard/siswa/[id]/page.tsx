@@ -41,7 +41,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const [trackingDays, setTrackingDays] = useState(0)
   const [summary, setSummary] = useState<{ kekuatan: string[]; kebutuhan: string[]; ringkasan: string; rekomendasi_fase: PhaseRecommendation[] } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tracking, setTracking] = useState<Array<{ tujuan_ppi_id: string; tanggal: string; kode_bantuan: string; benar: number | null; total: number | null; langkah_label: string }>>([])
+  const [tracking, setTracking] = useState<Array<{ tujuan_ppi_id: string; tanggal: string; sesi_ke: number; kode_bantuan: string; benar: number | null; total: number | null; langkah_label: string }>>([])
   const [selectedBreakdown, setSelectedBreakdown] = useState<'academic' | 'nonAcademic' | null>(null)
 
   useEffect(() => {
@@ -52,12 +52,12 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
         supabase.from('siswa').select('nama, kategori, status_diagnosis, deskripsi_kebutuhan, kelas_id, saran_referral').eq('id', params.id).single(),
         supabase.from('ppi').select('id').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('ppi_teams').select('id', { count: 'exact', head: true }).eq('siswa_id', params.id),
-        supabase.from('daily_tracking').select('tujuan_ppi_id, tanggal, kode_bantuan, benar, total, langkah_label').eq('siswa_id', params.id).order('tanggal'),
+        supabase.from('daily_tracking').select('tujuan_ppi_id, tanggal, sesi_ke, kode_bantuan, benar, total, langkah_label').eq('siswa_id', params.id).order('sesi_ke'),
         supabase.from('assessment_summaries').select('kekuatan, kebutuhan, ringkasan, rekomendasi_fase').eq('siswa_id', params.id).maybeSingle(),
       ])
       setStudent(studentResult.data as Student)
       setTeamCount(teamResult.count || 0)
-      setTrackingDays(new Set((trackingResult.data || []).map((item) => item.tanggal)).size)
+      setTrackingDays(new Set((trackingResult.data || []).map((item) => item.sesi_ke)).size)
       setTracking(trackingResult.data || [])
       if (summaryResult.data) setSummary(summaryResult.data as typeof summary)
       if (ppiResult.data) {
@@ -152,7 +152,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <button type="button" onClick={() => setSelectedBreakdown('academic')} className="rounded-2xl bg-primary p-4 text-left text-white transition-transform hover:-translate-y-0.5"><BookOpen className="h-5 w-5" /><div className="mt-3 text-3xl font-bold">{academicAverage === null ? '—' : `${academicAverage}%`}</div><div className="text-sm text-white/75">Target akademik tercapai</div><div className="mt-3 text-[11px] font-bold text-white/70">{academic.length === 0 ? 'Belum ada target akademik' : academicAverage === null ? 'Belum ditracking' : 'Lihat sumber nilai'}</div></button>
         <button type="button" onClick={() => setSelectedBreakdown('nonAcademic')} className="rounded-2xl border bg-white p-4 text-left transition-transform hover:-translate-y-0.5"><Target className="h-5 w-5 text-secondary" /><div className="mt-3 text-3xl font-bold">{nonAcademicAverage === null ? '—' : `${nonAcademicAverage}%`}</div><div className="text-sm text-on-surface-variant">Target non-akademik tercapai</div><div className="mt-3 text-[11px] font-bold text-primary">{nonAcademic.length === 0 ? 'Belum ada target non-akademik' : nonAcademicAverage === null ? 'Belum ditracking' : 'Lihat sumber nilai'}</div></button>
-        <div className="rounded-2xl border bg-white p-4"><CalendarCheck className="h-5 w-5 text-primary" /><div className="mt-3 text-3xl font-bold">{trackingDays}</div><div className="text-sm text-on-surface-variant">Hari tracking</div></div>
+        <div className="rounded-2xl border bg-white p-4"><CalendarCheck className="h-5 w-5 text-primary" /><div className="mt-3 text-3xl font-bold">{trackingDays}</div><div className="text-sm text-on-surface-variant">Sesi tracking</div></div>
         <div className="rounded-2xl border bg-white p-4"><Users className="h-5 w-5 text-primary" /><div className="mt-3 text-3xl font-bold">{teamCount}</div><div className="text-sm text-on-surface-variant">Anggota Tim PPI</div></div>
       </div>
 
