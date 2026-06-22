@@ -451,6 +451,8 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             {goals.map((goal) => {
               const status = statusMap[goal.status]
               const identity = goalIdentity(goal)
+              const followUpKey = identity.subject || identity.title
+              const hasFollowUp = followUpKey ? goals.some((g) => g.id !== goal.id && g.status !== 'tercapai' && (goalIdentity(g).subject === followUpKey || goalIdentity(g).title === followUpKey)) : false
               return (
                 <article key={goal.id} className="bg-white rounded-3xl border border-outline-variant/20">
                   <button type="button" onClick={() => setExpandedGoals((prev) => { const next = new Set(prev); if (next.has(goal.id)) next.delete(goal.id); else next.add(goal.id); return next })} className="w-full flex items-center justify-between gap-3 p-5 sm:p-md text-left">
@@ -505,8 +507,8 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                     {goal.status === 'tercapai' ? (
                       <div className="rounded-2xl bg-secondary-container/50 p-4 text-center">
                         <p className="text-sm font-bold text-secondary">Tujuan tercapai ✓</p>
-                        <p className="mt-1 text-xs text-on-surface-variant">Goal ini sudah ditandai tuntas.</p>
-                        <button type="button" onClick={() => setPengayaanGoal(goal)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"><Plus className="w-4 h-4" /> Buat pengayaan</button>
+                        <p className="mt-1 text-xs text-on-surface-variant">{hasFollowUp ? 'Target pengayaan untuk area ini sudah dibuat.' : 'Buat target lanjutan untuk area ini.'}</p>
+                        {!hasFollowUp && <button type="button" onClick={() => setPengayaanGoal(goal)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"><Plus className="w-4 h-4" /> Buat pengayaan</button>}
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center gap-3">
