@@ -393,7 +393,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
 
         <div className="grid md:grid-cols-3 gap-3 mb-md">
           {[
-            { icon: Target, label: 'Tujuan aktif', value: goals.length, color: 'text-primary', bg: 'bg-primary/10' },
+            { icon: Target, label: 'Tujuan aktif', value: goals.filter((g) => g.status !== 'tercapai').length, color: 'text-primary', bg: 'bg-primary/10' },
             { icon: CheckCircle2, label: 'Hampir tercapai', value: goals.filter((item) => item.status === 'hampir_tercapai').length, color: 'text-secondary', bg: 'bg-secondary-container/40' },
             { icon: CalendarDays, label: 'Sisa periode', value: daysUntilEvaluation === null ? '—' : `${daysUntilEvaluation} hari`, color: 'text-tertiary', bg: 'bg-tertiary-fixed/40' },
           ].map((item) => (
