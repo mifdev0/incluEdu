@@ -80,6 +80,9 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [generatingPengayaan, setGeneratingPengayaan] = useState(false)
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set())
   const [team, setTeam] = useState<Array<{ nama: string; peran: string }>>([])
+  const [teamEditOpen, setTeamEditOpen] = useState(false)
+  const [teamForm, setTeamForm] = useState<Array<{ nama: string; peran: string }>>([])
+  const [savingTeam, setSavingTeam] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -551,14 +554,23 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               </ul>
             </div>
             <div className="bg-[#E4F8EE] rounded-3xl border border-secondary/10 p-5">
-              <Users className="w-6 h-6 text-secondary mb-3" />
+              <div className="flex items-center justify-between gap-2"><Users className="w-6 h-6 text-secondary mb-3" /><button type="button" onClick={() => { setTeamForm(team.length > 0 ? team.map((m) => ({ ...m })) : [{ peran: 'guru_kelas', nama: user.nama }]); setTeamEditOpen(true) }} className="mb-3 rounded-full p-1.5 text-secondary hover:bg-secondary/10"><Pencil className="w-4 h-4" /></button></div>
               <h3 className="font-bold text-lg">Tim PPI</h3>
-              <div className="mt-3 space-y-3 text-sm">
+              {teamEditOpen ? (
+                <div className="mt-3 space-y-3 text-sm">
+                  {teamForm.map((member, index) => {
+                    const labels: Record<string, string> = { guru_kelas: 'Guru kelas', orang_tua: 'Orang tua / wali', kepala_sekolah: 'Kepala sekolah', guru_bk: 'Guru BK', gpk: 'GPK', psikolog: 'Psikolog', terapis: 'Terapis', lainnya: 'Pendamping lain' }
+                    return <div key={index} className="flex items-center gap-2"><select value={member.peran} onChange={(e) => setTeamForm((prev) => prev.map((m, i) => i === index ? { ...m, peran: e.target.value } : m))} className="min-w-0 flex-1 rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs">{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input value={member.nama} onChange={(e) => setTeamForm((prev) => prev.map((m, i) => i === index ? { ...m, nama: e.target.value } : m))} placeholder="Nama" className="min-w-0 flex-[2] rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-xs" />{teamForm.length > 1 && <button type="button" onClick={() => setTeamForm((prev) => prev.filter((_, i) => i !== index))} className="shrink-0 p-1 text-error"><X className="w-4 h-4" /></button>}</div>
+                  })}
+                  <button type="button" onClick={() => setTeamForm((prev) => [...prev, { peran: 'lainnya', nama: '' }])} className="text-xs font-bold text-primary">+ Tambah anggota</button>
+                  <div className="flex gap-2"><button type="button" onClick={async () => { setSavingTeam(true); await supabase.from('ppi_teams').delete().eq('siswa_id', params.id); const { error } = await supabase.from('ppi_teams').insert(teamForm.filter((m) => m.nama.trim()).map((m) => ({ siswa_id: params.id, nama: m.nama.trim(), peran: m.peran, wajib: m.peran === 'guru_kelas' || m.peran === 'orang_tua' }))); if (!error) { const { data } = await supabase.from('ppi_teams').select('nama, peran').eq('siswa_id', params.id).order('wajib', { ascending: false }); setTeam(data || []) }; setSavingTeam(false); setTeamEditOpen(false) }} disabled={savingTeam || teamForm.filter((m) => m.nama.trim()).length === 0} className="flex-1 rounded-full bg-primary py-2 text-xs font-bold text-white disabled:opacity-40">{savingTeam ? 'Menyimpan...' : 'Simpan'}</button><button type="button" onClick={() => setTeamEditOpen(false)} className="rounded-full bg-surface-container-high px-4 py-2 text-xs font-bold">Batal</button></div>
+                </div>
+              ) : <div className="mt-3 space-y-3 text-sm">
                 {team.length > 0 ? team.map((member) => {
                   const labels: Record<string, string> = { guru_kelas: 'Guru kelas', orang_tua: 'Orang tua / wali', kepala_sekolah: 'Kepala sekolah', guru_bk: 'Guru BK', gpk: 'GPK', psikolog: 'Psikolog', terapis: 'Terapis', lainnya: 'Pendamping lain' }
                   return <div key={member.peran}><div className="font-bold">{labels[member.peran] || member.peran}</div><div className="text-on-surface-variant">{member.nama}</div></div>
                 }) : <><div><div className="font-bold">Guru kelas</div><div className="text-on-surface-variant">{user.nama}</div></div><div><div className="font-bold">Anggota lain</div><div className="text-on-surface-variant">Belum ditambahkan</div></div></>}
-              </div>
+              </div>}
             </div>
           </aside>
         </div>
