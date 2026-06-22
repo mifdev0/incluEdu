@@ -104,6 +104,49 @@ Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akade
       })
     }
 
+    if (body.action === 'pengayaan') {
+      const result = await deepseekJson<{
+        area: string
+        jenis_target: 'akademik' | 'non_akademik'
+        mata_pelajaran: string
+        fase_adaptasi: string
+        elemen_cp: string
+        tujuan: string
+        indikator: string
+        target: number
+        aktivitas: string
+        media_alat: string
+        pelaksana: string
+        frekuensi: string
+        metode_evaluasi: string
+        langkah_tugas: string[]
+      }>(
+        'Kamu membantu guru menyusun target pengayaan PPI setelah siswa mencapai tujuan sebelumnya. Buat 1 target yang setingkat lebih tinggi atau fase berikutnya.',
+        `Siswa: ${JSON.stringify(body.student)}
+Goal yang sudah tercapai: ${JSON.stringify(body.completedGoal)}
+${body.nextPhase ? `Fase selanjutnya yang disarankan: ${body.nextPhase}` : ''}
+
+Buat 1 tujuan pengayaan yang merupakan lanjutan dari goal yang sudah tercapai. Jika memungkinkan, naikkan fase atau tingkat kesulitan. Tujuan harus spesifik, terukur, dan realistis. Kembalikan JSON dengan: area, jenis_target, mata_pelajaran, fase_adaptasi, elemen_cp, tujuan, indikator, target (0-100), aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas (3-5 langkah).`
+      )
+      const steps = Array.isArray(result.langkah_tugas) ? result.langkah_tugas.map(String).filter(Boolean).slice(0, 6) : []
+      return NextResponse.json({
+        area: String(result.area || ''),
+        jenis_target: result.jenis_target === 'akademik' ? 'akademik' : 'non_akademik',
+        mata_pelajaran: String(result.mata_pelajaran || ''),
+        fase_adaptasi: String(result.fase_adaptasi || ''),
+        elemen_cp: String(result.elemen_cp || ''),
+        tujuan: String(result.tujuan || ''),
+        indikator: String(result.indikator || String(result.tujuan || '')),
+        target: Math.min(100, Math.max(0, Number(result.target) || 80)),
+        aktivitas: String(result.aktivitas || ''),
+        media_alat: String(result.media_alat || ''),
+        pelaksana: String(result.pelaksana || 'Guru kelas'),
+        frekuensi: String(result.frekuensi || 'Disesuaikan'),
+        metode_evaluasi: String(result.metode_evaluasi || 'Observasi kinerja'),
+        langkah_tugas: steps.length > 0 ? steps : [String(result.indikator || result.tujuan || '')].filter(Boolean),
+      })
+    }
+
     if (body.action === 'accommodations') {
       const catalog = ACCOMMODATION_OPTIONS.map((option) => ({
         value: option.value,

@@ -76,6 +76,8 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [assessmentResponses, setAssessmentResponses] = useState<AssessmentResponseRow[]>([])
   const [addingNonAcademic, setAddingNonAcademic] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
+  const [pengayaanGoal, setPengayaanGoal] = useState<PpiGoal | null>(null)
+  const [generatingPengayaan, setGeneratingPengayaan] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -501,7 +503,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                     <div className="mt-4 rounded-2xl bg-secondary-container/50 p-4 text-center">
                       <p className="text-sm font-bold text-secondary">Tujuan tercapai ✓</p>
                       <p className="mt-1 text-xs text-on-surface-variant">Goal ini sudah ditandai tuntas.</p>
-                      <button type="button" onClick={() => { openNewGoal(); setGoalForm((current) => ({ ...current, area: identity.subject || goal.area.split('·')[0].trim(), cp_id: goal.cp_id || '' })) }} className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"><Plus className="w-4 h-4" /> Buat pengayaan</button>
+                      <button type="button" onClick={() => setPengayaanGoal(goal)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"><Plus className="w-4 h-4" /> Buat pengayaan</button>
                     </div>
                   ) : (
                     <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -718,6 +720,73 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {pengayaanGoal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/35 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl text-center">
+            <div className="text-xs font-bold text-primary">PENGAYAAN</div>
+            <h2 className="mt-2 text-xl font-bold">Buat target lanjutan</h2>
+            <p className="mt-2 text-sm text-on-surface-variant">Goal <strong>{pengayaanGoal.tujuan}</strong> sudah tercapai. Pilih cara membuat target pengayaan:</p>
+            <div className="mt-6 grid gap-3">
+              <button type="button" onClick={async () => {
+                setGeneratingPengayaan(true)
+                try {
+                  const res = await fetch('/api/ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      action: 'pengayaan',
+                      student: { nama: studentName },
+                      completedGoal: pengayaanGoal,
+                      nextPhase: pengayaanGoal.fase_adaptasi ? String.fromCharCode(pengayaanGoal.fase_adaptasi.charCodeAt(0) + 1) : undefined,
+                    }),
+                  })
+                  const data = await res.json()
+                  if (res.ok && data.tujuan) {
+                    const nextCp = cpOptions.find((cp) => cp.mata_pelajaran === data.mata_pelajaran && cp.fase === data.fase_adaptasi)
+                    setGoalForm({
+                      ...emptyGoalForm,
+                      area: data.area || '',
+                      tujuan: data.tujuan,
+                      indikator: data.indikator || data.tujuan,
+                      target: data.target || 80,
+                      aktivitas: data.aktivitas || '',
+                      media_alat: data.media_alat || '',
+                      pelaksana: data.pelaksana || 'Guru kelas',
+                      frekuensi: data.frekuensi || '',
+                      metode_evaluasi: data.metode_evaluasi || 'Observasi kinerja',
+                      langkah_tugas: data.langkah_tugas?.length ? data.langkah_tugas : [''],
+                      jenis_target: data.jenis_target || 'non_akademik',
+                      cp_id: nextCp?.id || '',
+                      kriteria_tuntas: `Tuntas apabila mencapai minimal ${data.target || 80}%`,
+                    })
+                    setGoalModalOpen(true)
+                  } else {
+                    setGoalError('AI gagal membuat pengayaan. Coba manual.')
+                  }
+                } catch {
+                  setGoalError('Gagal menghubungi AI. Coba manual.')
+                }
+                setGeneratingPengayaan(false)
+                setPengayaanGoal(null)
+              }} disabled={generatingPengayaan} className="w-full rounded-2xl border-2 border-primary bg-primary/5 px-5 py-4 text-left font-bold text-primary hover:bg-primary/10 disabled:opacity-40">
+                <span className="block text-sm">🤖 Buat dengan AI</span>
+                <span className="block text-xs font-normal text-on-surface-variant mt-0.5">Target baru akan difase {pengayaanGoal.fase_adaptasi ? String.fromCharCode(pengayaanGoal.fase_adaptasi.charCodeAt(0) + 1) : 'berikutnya'}</span>
+              </button>
+              <button type="button" onClick={() => {
+                const identity = goalIdentity(pengayaanGoal)
+                openNewGoal()
+                setGoalForm((current) => ({ ...current, area: identity.subject || pengayaanGoal.area.split('·')[0].trim(), cp_id: pengayaanGoal.cp_id || '' }))
+                setPengayaanGoal(null)
+              }} className="w-full rounded-2xl border border-outline-variant/30 px-5 py-4 text-left font-bold text-on-surface hover:bg-surface-container-low">
+                <span className="block text-sm">✏️ Buat manual</span>
+                <span className="block text-xs font-normal text-on-surface-variant mt-0.5">Buka form kosong untuk diisi sendiri</span>
+              </button>
+            </div>
+            <button type="button" onClick={() => setPengayaanGoal(null)} className="mt-4 text-sm font-bold text-on-surface-variant">Batal</button>
+          </div>
         </div>
       )}
     </div>
