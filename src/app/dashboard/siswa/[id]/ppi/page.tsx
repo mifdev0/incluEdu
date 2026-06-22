@@ -79,6 +79,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [pengayaanGoal, setPengayaanGoal] = useState<PpiGoal | null>(null)
   const [generatingPengayaan, setGeneratingPengayaan] = useState(false)
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set())
+  const [team, setTeam] = useState<Array<{ nama: string; peran: string }>>([])
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -120,6 +121,8 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           await supabase.from('ppi').update({ tujuan_jangka_panjang: repairedGoal }).eq('id', data.id)
         }
         setCpOptions((curriculumRows || []) as typeof cpOptions)
+        const { data: teamRows } = await supabase.from('ppi_teams').select('nama, peran').eq('siswa_id', params.id).order('wajib', { ascending: false })
+        setTeam(teamRows || [])
         setDataLoading(false)
       })
     }
@@ -551,9 +554,10 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               <Users className="w-6 h-6 text-secondary mb-3" />
               <h3 className="font-bold text-lg">Tim PPI</h3>
               <div className="mt-3 space-y-3 text-sm">
-                <div><div className="font-bold">Guru kelas</div><div className="text-on-surface-variant">{user.nama}</div></div>
-                <div><div className="font-bold">Orang tua / wali</div><div className="text-on-surface-variant">Belum dikonfirmasi</div></div>
-                <div><div className="font-bold">Pendamping lain</div><div className="text-on-surface-variant">Belum ditambahkan</div></div>
+                {team.length > 0 ? team.map((member) => {
+                  const labels: Record<string, string> = { guru_kelas: 'Guru kelas', orang_tua: 'Orang tua / wali', kepala_sekolah: 'Kepala sekolah', guru_bk: 'Guru BK', gpk: 'GPK', psikolog: 'Psikolog', terapis: 'Terapis', lainnya: 'Pendamping lain' }
+                  return <div key={member.peran}><div className="font-bold">{labels[member.peran] || member.peran}</div><div className="text-on-surface-variant">{member.nama}</div></div>
+                }) : <><div><div className="font-bold">Guru kelas</div><div className="text-on-surface-variant">{user.nama}</div></div><div><div className="font-bold">Anggota lain</div><div className="text-on-surface-variant">Belum ditambahkan</div></div></>}
               </div>
             </div>
           </aside>
