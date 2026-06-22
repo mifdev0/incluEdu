@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
-import { CalendarDays, CheckCircle2, ChevronDown, ClipboardList, FileDown, ListChecks, Pencil, Plus, Target, Users, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronDown, ClipboardList, FileDown, ListChecks, Pencil, Plus, Sparkles, Target, Users, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
@@ -776,7 +776,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                 setGeneratingPengayaan(false)
                 setPengayaanGoal(null)
               }} disabled={generatingPengayaan} className="w-full rounded-2xl border-2 border-primary bg-primary/5 px-5 py-4 text-left font-bold text-primary hover:bg-primary/10 disabled:opacity-40">
-                <span className="block text-sm">🤖 Buat dengan AI</span>
+                <span className="block text-sm"><Sparkles className="mr-2 inline h-4 w-4 text-primary" />Buat dengan AI</span>
                 <span className="block text-xs font-normal text-on-surface-variant mt-0.5">Target baru akan difase {pengayaanGoal.fase_adaptasi ? String.fromCharCode(pengayaanGoal.fase_adaptasi.charCodeAt(0) + 1) : 'berikutnya'}</span>
               </button>
               <button type="button" onClick={() => {
@@ -785,7 +785,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                 setGoalForm((current) => ({ ...current, area: identity.subject || pengayaanGoal.area.split('·')[0].trim(), cp_id: pengayaanGoal.cp_id || '' }))
                 setPengayaanGoal(null)
               }} className="w-full rounded-2xl border border-outline-variant/30 px-5 py-4 text-left font-bold text-on-surface hover:bg-surface-container-low">
-                <span className="block text-sm">✏️ Buat manual</span>
+                <span className="block text-sm"><Pencil className="mr-2 inline h-4 w-4" />Buat manual</span>
                 <span className="block text-xs font-normal text-on-surface-variant mt-0.5">Buka form kosong untuk diisi sendiri</span>
               </button>
             </div>
