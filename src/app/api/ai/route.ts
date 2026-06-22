@@ -55,7 +55,8 @@ Kembalikan JSON dengan kategori, keyakinan, alasan singkat, 2-4 pertanyaan_lanju
         'Kamu membantu guru menyusun draf Program Pembelajaran Individual sesuai prinsip PPI Kemendikbudristek 2021. Tujuan harus individual, spesifik, terukur, realistis, berdasarkan kekuatan dan kemampuan awal. AI hanya menyusun draf yang wajib ditinjau guru.',
         `Profil siswa: ${JSON.stringify(body.student)}
 Asesmen awal: ${JSON.stringify(body.baseline)}
-Susun satu tujuan jangka panjang, 2-4 tujuan jangka pendek, dan strategi pembelajaran.
+Susun satu tujuan jangka panjang, 3-5 tujuan jangka pendek, dan strategi pembelajaran.
+WAJIB sertakan minimal satu target non_akademik berdasarkan kebutuhan sikap belajar, sosial-emosional, bina diri, atau motorik pada asesmen. Target akademik dan non-akademik harus dipisahkan.
 Untuk target akademik, ikuti rekomendasi fase kemampuan pada input meskipun berbeda dari fase kelas administratif.
 Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akademik), mata_pelajaran, fase_adaptasi, elemen_cp, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati.`
       )
@@ -135,11 +136,11 @@ Kembalikan JSON berisi ringkasan singkat dan 3-6 saran. Setiap saran wajib memil
         ringkasan: string
         saran_referral: string
       }>(
-        'Kamu adalah asisten PPI pendidikan inklusif. Rangkum data asesmen guru secara objektif. Jangan mendiagnosis. Gunakan istilah kekuatan dan kebutuhan dukungan, bukan label negatif.',
+        'Kamu adalah asisten PPI pendidikan inklusif. Rangkum data asesmen guru secara objektif. Jangan mendiagnosis. Gunakan istilah kekuatan dan kebutuhan dukungan, bukan label negatif. Indikator akademik memiliki fase_uji; jelaskan kemampuan hanya pada fase yang benar-benar diuji dan jangan menganggap hasil itu berlaku untuk fase lain.',
         `Profil siswa: ${JSON.stringify(body.student)}
 Hasil checklist asesmen: ${JSON.stringify(body.assessment)}
 
-Kembalikan JSON berisi 3-6 kekuatan, 3-6 kebutuhan, ringkasan maksimal 3 kalimat, dan saran_referral singkat bila perlu. Jangan membuat kemampuan yang tidak tercatat.`,
+Kembalikan JSON berisi 3-6 kekuatan, 3-6 kebutuhan, ringkasan maksimal 3 kalimat, dan saran_referral singkat bila perlu. Sebutkan fase akademik yang diuji bila relevan. Jangan membuat kemampuan yang tidak tercatat.`,
         1600,
       )
       const assessmentRows = Array.isArray(body.assessment) ? body.assessment : []

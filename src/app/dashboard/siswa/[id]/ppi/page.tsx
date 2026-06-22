@@ -8,6 +8,7 @@ import { CalendarDays, CheckCircle2, ClipboardList, ListChecks, Pencil, Plus, Ta
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
+import { buildNonAcademicGoal, type AssessmentResponseRow } from '@/lib/ppi-v2-data'
 
 const statusMap = {
   belum_dimulai: { label: 'Belum dimulai', style: 'bg-surface-container-high text-on-surface-variant' },
@@ -55,11 +56,16 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [editingGoal, setEditingGoal] = useState<PpiGoal | null>(null)
   const [goalForm, setGoalForm] = useState(emptyGoalForm)
   const [cpOptions, setCpOptions] = useState<Array<{ id: string; mata_pelajaran: string; fase: string; jenjang: string; nama_elemen: string; deskripsi_cp: string; indikator_operasional: string[] }>>([])
+  const [assessmentResponses, setAssessmentResponses] = useState<AssessmentResponseRow[]>([])
+  const [addingNonAcademic, setAddingNonAcademic] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
     if (user) {
       supabase.from('siswa').select('nama').eq('id', params.id).single().then(({ data }) => setStudentName(data?.nama || ''))
+      supabase.from('assessment_responses').select('item_key, item_label, domain, nilai').eq('siswa_id', params.id).then(({ data }) => {
+        setAssessmentResponses((data || []) as AssessmentResponseRow[])
+      })
       supabase.from('ppi').select('id, periode_mulai, periode_selesai, strategi, tujuan_jangka_panjang').eq('siswa_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle().then(async ({ data }) => {
         if (!data) {
           setDataLoading(false)
@@ -84,6 +90,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   if (loading || !user || dataLoading) return <FullPageLoading label="Memuat rancangan PPI..." />
 
   const displayName = studentName || 'Siswa'
+  const hasNonAcademicGoal = goals.some((goal) => goal.jenis_target === 'non_akademik')
 
   function openNewGoal() {
     setEditingGoal(null)
@@ -224,6 +231,33 @@ export default function PpiPage({ params }: { params: { id: string } }) {
     setGoalModalOpen(false)
   }
 
+  async function addRecommendedNonAcademicGoal() {
+    if (!ppiId || hasNonAcademicGoal) return
+    setAddingNonAcademic(true)
+    setGoalError('')
+    const draft = buildNonAcademicGoal(displayName, assessmentResponses)
+    const { data, error } = await supabase.from('tujuan_ppi').insert({
+      ppi_id: ppiId,
+      ...draft,
+      capaian: 0,
+      status: 'belum_dimulai',
+      cp_id: null,
+      fase_adaptasi: null,
+    }).select('id, area, tujuan, indikator, target, capaian, status, aktivitas, media_alat, pelaksana, frekuensi, metode_evaluasi, langkah_tugas, jenis_target, cp_id, fase_adaptasi, kriteria_tuntas, skor_benar_target, skor_total_target').single()
+    if (error || !data) {
+      setGoalError(error?.message || 'Target non-akademik belum berhasil dibuat.')
+      setAddingNonAcademic(false)
+      return
+    }
+    await supabase.from('goal_accommodations').insert([
+      { tujuan_ppi_id: data.id, jenis: 'media', deskripsi: draft.media_alat },
+      { tujuan_ppi_id: data.id, jenis: 'strategi', deskripsi: draft.aktivitas },
+      { tujuan_ppi_id: data.id, jenis: 'durasi', deskripsi: draft.frekuensi },
+    ])
+    setGoals((current) => [...current, data as PpiGoal])
+    setAddingNonAcademic(false)
+  }
+
   return (
     <div className="min-h-screen bg-[#FAFAF5]">
       <header className="app-header">
@@ -274,6 +308,16 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               <h2 className="font-headline-sm text-headline-sm">Tujuan pembelajaran individual</h2>
               <p className="text-sm text-on-surface-variant mt-1">Tracking harian mengukur kemajuan terhadap target dan kriteria ketuntasan berikut.</p>
             </div>
+            {!hasNonAcademicGoal && hasPpi && (
+              <div className="rounded-3xl border border-tertiary/20 bg-tertiary-fixed/25 p-5">
+                <div className="font-bold text-on-surface">Target non-akademik belum tersedia</div>
+                <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">Tanpa target non-akademik, tracking hanya menghasilkan nilai akademik. Buat target dari kebutuhan sikap belajar, sosial-emosional, bina diri, atau motorik pada asesmen.</p>
+                <button type="button" onClick={addRecommendedNonAcademicGoal} disabled={addingNonAcademic} className="mt-4 rounded-full bg-primary px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
+                  {addingNonAcademic ? <LoadingSpinner label="Membuat target..." /> : 'Buat target non-akademik dari asesmen'}
+                </button>
+              </div>
+            )}
+            {goalError && <p className="rounded-2xl bg-error-container/60 px-4 py-3 text-sm font-medium text-error">{goalError}</p>}
             {!hasPpi && (
               <div className="rounded-3xl border-2 border-dashed border-outline-variant/40 bg-white p-8 text-center">
                 <h3 className="font-bold text-lg">Belum ada rancangan PPI</h3>
