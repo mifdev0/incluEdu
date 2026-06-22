@@ -28,7 +28,7 @@ const emptyGoalForm = {
   pelaksana: 'Guru kelas',
   frekuensi: '',
   metode_evaluasi: 'Observasi kinerja',
-  langkah_tugas: ['', ''],
+  langkah_tugas: [''],
   catatan_evaluasi: '',
   tindak_lanjut: 'lanjutkan',
   jenis_target: 'non_akademik',
@@ -75,6 +75,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [cpOptions, setCpOptions] = useState<Array<{ id: string; mata_pelajaran: string; fase: string; jenjang: string; nama_elemen: string; deskripsi_cp: string; indikator_operasional: string[] }>>([])
   const [assessmentResponses, setAssessmentResponses] = useState<AssessmentResponseRow[]>([])
   const [addingNonAcademic, setAddingNonAcademic] = useState(false)
+  const [showDetail, setShowDetail] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -169,7 +170,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
       pelaksana: goal.pelaksana || 'Guru kelas',
       frekuensi: goal.frekuensi || '',
       metode_evaluasi: goal.metode_evaluasi || 'Observasi kinerja',
-      langkah_tugas: Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? goal.langkah_tugas : ['', ''],
+      langkah_tugas: Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? goal.langkah_tugas : [''],
       catatan_evaluasi: '',
       tindak_lanjut: goal.status === 'tercapai' ? 'tercapai' : 'lanjutkan',
       jenis_target: goal.jenis_target || 'non_akademik',
@@ -414,7 +415,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
           <section className="space-y-4">
             <div>
               <h2 className="font-headline-sm text-headline-sm">Tujuan pembelajaran individual</h2>
-              <p className="text-sm text-on-surface-variant mt-1">Tracking harian mengukur kemajuan terhadap target dan kriteria ketuntasan berikut.</p>
+              <p className="text-sm text-on-surface-variant mt-1">Pantau kemajuan siswa setiap hari. Klik <strong>Evaluasi atau revisi tujuan</strong> untuk memperbarui capaian atau menambah langkah tugas.</p>
             </div>
             {!hasNonAcademicGoal && hasPpi && (
               <div className="rounded-3xl border border-tertiary/20 bg-tertiary-fixed/25 p-5">
@@ -540,102 +541,6 @@ export default function PpiPage({ params }: { params: { id: string } }) {
 
             <div className="mt-6 space-y-4">
               <label className="block">
-                <span className="text-sm font-bold text-on-surface">Area perkembangan</span>
-                <input
-                  value={goalForm.area}
-                  onChange={(event) => setGoalForm((current) => ({ ...current, area: event.target.value }))}
-                  placeholder="Contoh: Membaca permulaan"
-                  className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary"
-                />
-              </label>
-              <div className="rounded-2xl border border-outline-variant/25 bg-surface-container-low p-4">
-                <div className="text-sm font-bold">Jenis target</div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {[['akademik', 'Akademik / mapel'], ['non_akademik', 'Non-akademik']].map(([value, label]) => <button key={value} type="button" onClick={() => setGoalForm((current) => ({ ...current, jenis_target: value }))} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${goalForm.jenis_target === value ? 'border-primary bg-primary text-white' : 'bg-white'}`}>{label}</button>)}
-                </div>
-              </div>
-              {goalForm.jenis_target === 'akademik' && (
-                <label className="block">
-                  <span className="text-sm font-bold text-on-surface">Capaian Pembelajaran yang diadaptasi</span>
-                  <select value={goalForm.cp_id} onChange={(event) => {
-                    const cp = cpOptions.find((item) => item.id === event.target.value)
-                    setGoalForm((current) => ({
-                      ...current,
-                      cp_id: event.target.value,
-                      area: cp ? `${cp.mata_pelajaran} · ${cp.nama_elemen}` : current.area,
-                    }))
-                  }} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3">
-                    <option value="">Pilih CP lintas fase</option>
-                    {cpOptions.map((cp) => <option key={cp.id} value={cp.id}>{cp.mata_pelajaran} · Fase {cp.fase} · {cp.nama_elemen}</option>)}
-                  </select>
-                  {goalForm.cp_id && <p className="mt-2 rounded-2xl bg-primary/5 p-3 text-xs leading-relaxed text-on-surface-variant">{cpOptions.find((item) => item.id === goalForm.cp_id)?.deskripsi_cp}</p>}
-                </label>
-              )}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-sm font-bold text-on-surface">Aktivitas pembelajaran</span>
-                  <textarea value={goalForm.aktivitas} onChange={(event) => setGoalForm((current) => ({ ...current, aktivitas: event.target.value }))} rows={3} placeholder="Kegiatan yang dilakukan untuk mencapai tujuan" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-bold text-on-surface">Media atau alat bantu</span>
-                  <textarea value={goalForm.media_alat} onChange={(event) => setGoalForm((current) => ({ ...current, media_alat: event.target.value }))} rows={3} placeholder="Contoh: kartu huruf timbul, timer visual" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-bold text-on-surface">Pelaksana</span>
-                  <input value={goalForm.pelaksana} onChange={(event) => setGoalForm((current) => ({ ...current, pelaksana: event.target.value }))} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-bold text-on-surface">Frekuensi atau durasi</span>
-                  <input value={goalForm.frekuensi} onChange={(event) => setGoalForm((current) => ({ ...current, frekuensi: event.target.value }))} placeholder="Contoh: 3 kali seminggu, 15 menit" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-                </label>
-              </div>
-              <label className="block">
-                <span className="text-sm font-bold text-on-surface">Metode evaluasi</span>
-                <input value={goalForm.metode_evaluasi} onChange={(event) => setGoalForm((current) => ({ ...current, metode_evaluasi: event.target.value }))} placeholder="Contoh: tes kinerja dan observasi langsung" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-              </label>
-              <label className="block">
-                <span className="text-sm font-bold text-on-surface">Kriteria ketuntasan</span>
-                <input value={goalForm.kriteria_tuntas} onChange={(event) => setGoalForm((current) => ({ ...current, kriteria_tuntas: event.target.value }))} placeholder="Contoh: Tuntas jika benar 8 dari 10 soal" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3" />
-              </label>
-              {goalForm.jenis_target === 'akademik' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <label><span className="text-sm font-bold">Jawaban benar target</span><input type="number" min="0" value={goalForm.skor_benar_target} onChange={(event) => setGoalForm((current) => ({ ...current, skor_benar_target: event.target.value }))} placeholder="8" className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" /></label>
-                  <label><span className="text-sm font-bold">Total soal / tugas</span><input type="number" min="1" value={goalForm.skor_total_target} onChange={(event) => setGoalForm((current) => ({ ...current, skor_total_target: event.target.value }))} placeholder="10" className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" /></label>
-                </div>
-              )}
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-bold text-on-surface">Langkah analisis tugas</span>
-                  <button type="button" onClick={() => setGoalForm((current) => ({ ...current, langkah_tugas: [...current.langkah_tugas, ''] }))} className="text-xs font-bold text-primary">+ Tambah langkah</button>
-                </div>
-                <div className="mt-2 space-y-2">
-                  {goalForm.langkah_tugas.map((task, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <span className="w-7 text-center text-sm font-bold text-primary">{index + 1}</span>
-                      <input value={task} onChange={(event) => setGoalForm((current) => ({ ...current, langkah_tugas: current.langkah_tugas.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} placeholder="Langkah kecil yang dapat diamati" className="min-w-0 flex-1 rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
-                      {goalForm.langkah_tugas.length > 1 && <button type="button" onClick={() => setGoalForm((current) => ({ ...current, langkah_tugas: current.langkah_tugas.filter((_, itemIndex) => itemIndex !== index) }))} className="p-2 text-error" aria-label="Hapus langkah"><X className="w-4 h-4" /></button>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {editingGoal && (
-                <div className="rounded-2xl bg-tertiary-fixed/25 p-4 space-y-3">
-                  <label className="block">
-                    <span className="text-sm font-bold text-on-surface">Catatan hasil evaluasi</span>
-                    <textarea value={goalForm.catatan_evaluasi} onChange={(event) => setGoalForm((current) => ({ ...current, catatan_evaluasi: event.target.value }))} rows={2} placeholder="Perubahan yang terlihat dan alasan revisi" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-white px-4 py-3 outline-none focus:border-primary" />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-bold text-on-surface">Tindak lanjut</span>
-                    <select value={goalForm.tindak_lanjut} onChange={(event) => setGoalForm((current) => ({ ...current, tindak_lanjut: event.target.value }))} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-white px-4 py-3 outline-none focus:border-primary">
-                      <option value="lanjutkan">Lanjutkan program</option>
-                      <option value="revisi">Revisi dan pantau kembali</option>
-                      <option value="tercapai">Tujuan tercapai</option>
-                      <option value="hentikan">Hentikan tujuan</option>
-                    </select>
-                  </label>
-                </div>
-              )}
-              <label className="block">
                 <span className="text-sm font-bold text-on-surface">Tujuan jangka pendek</span>
                 <textarea
                   value={goalForm.tujuan}
@@ -670,6 +575,111 @@ export default function PpiPage({ params }: { params: { id: string } }) {
                   className="mt-3 w-full accent-primary"
                 />
               </label>
+              <label className="block">
+                <span className="text-sm font-bold text-on-surface">Area perkembangan</span>
+                <input
+                  value={goalForm.area}
+                  onChange={(event) => setGoalForm((current) => ({ ...current, area: event.target.value }))}
+                  placeholder="Contoh: Membaca permulaan"
+                  className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary"
+                />
+              </label>
+              <div className="rounded-2xl border border-outline-variant/25 bg-surface-container-low p-4">
+                <div className="text-sm font-bold">Jenis target</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {[['akademik', 'Akademik / mapel'], ['non_akademik', 'Non-akademik']].map(([value, label]) => <button key={value} type="button" onClick={() => setGoalForm((current) => ({ ...current, jenis_target: value }))} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${goalForm.jenis_target === value ? 'border-primary bg-primary text-white' : 'bg-white'}`}>{label}</button>)}
+                </div>
+              </div>
+              {goalForm.jenis_target === 'akademik' && (
+                <label className="block">
+                  <span className="text-sm font-bold text-on-surface">Capaian Pembelajaran yang diadaptasi</span>
+                  <select value={goalForm.cp_id} onChange={(event) => {
+                    const cp = cpOptions.find((item) => item.id === event.target.value)
+                    setGoalForm((current) => ({
+                      ...current,
+                      cp_id: event.target.value,
+                      area: cp ? `${cp.mata_pelajaran} · ${cp.nama_elemen}` : current.area,
+                    }))
+                  }} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3">
+                    <option value="">Pilih CP lintas fase</option>
+                    {cpOptions.map((cp) => <option key={cp.id} value={cp.id}>{cp.mata_pelajaran} · Fase {cp.fase} · {cp.nama_elemen}</option>)}
+                  </select>
+                  {goalForm.cp_id && <p className="mt-2 rounded-2xl bg-primary/5 p-3 text-xs leading-relaxed text-on-surface-variant">{cpOptions.find((item) => item.id === goalForm.cp_id)?.deskripsi_cp}</p>}
+                </label>
+              )}
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-bold text-on-surface">Langkah analisis tugas</span>
+                  <button type="button" onClick={() => setGoalForm((current) => ({ ...current, langkah_tugas: [...current.langkah_tugas, ''] }))} className="text-xs font-bold text-primary">+ Tambah langkah</button>
+                </div>
+                <p className="mt-1 text-xs text-on-surface-variant">Tulis 1 langkah dulu. Setelah siswa menguasainya, tambah langkah berikutnya.</p>
+                <div className="mt-2 space-y-2">
+                  {goalForm.langkah_tugas.map((task, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <span className="w-7 text-center text-sm font-bold text-primary">{index + 1}</span>
+                      <input value={task} onChange={(event) => setGoalForm((current) => ({ ...current, langkah_tugas: current.langkah_tugas.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} placeholder="Langkah kecil yang dapat diamati" className="min-w-0 flex-1 rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                      {goalForm.langkah_tugas.length > 1 && <button type="button" onClick={() => setGoalForm((current) => ({ ...current, langkah_tugas: current.langkah_tugas.filter((_, itemIndex) => itemIndex !== index) }))} className="p-2 text-error" aria-label="Hapus langkah"><X className="w-4 h-4" /></button>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowDetail((current) => !current)} className="flex w-full items-center justify-between rounded-2xl border border-outline-variant/30 bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface">
+                <span>Detail pelaksanaan</span>
+                <span className={`transition-transform ${showDetail ? 'rotate-180' : ''}`}>▼</span>
+              </button>
+              {showDetail && (
+                <div className="space-y-4 pl-2 border-l-2 border-outline-variant/20">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="text-sm font-bold text-on-surface">Aktivitas pembelajaran</span>
+                      <textarea value={goalForm.aktivitas} onChange={(event) => setGoalForm((current) => ({ ...current, aktivitas: event.target.value }))} rows={3} placeholder="Kegiatan yang dilakukan untuk mencapai tujuan" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-bold text-on-surface">Media atau alat bantu</span>
+                      <textarea value={goalForm.media_alat} onChange={(event) => setGoalForm((current) => ({ ...current, media_alat: event.target.value }))} rows={3} placeholder="Contoh: kartu huruf timbul, timer visual" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-bold text-on-surface">Pelaksana</span>
+                      <input value={goalForm.pelaksana} onChange={(event) => setGoalForm((current) => ({ ...current, pelaksana: event.target.value }))} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-bold text-on-surface">Frekuensi atau durasi</span>
+                      <input value={goalForm.frekuensi} onChange={(event) => setGoalForm((current) => ({ ...current, frekuensi: event.target.value }))} placeholder="Contoh: 3 kali seminggu, 15 menit" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                    </label>
+                  </div>
+                  <label className="block">
+                    <span className="text-sm font-bold text-on-surface">Metode evaluasi</span>
+                    <input value={goalForm.metode_evaluasi} onChange={(event) => setGoalForm((current) => ({ ...current, metode_evaluasi: event.target.value }))} placeholder="Contoh: tes kinerja dan observasi langsung" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3 outline-none focus:border-primary" />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-bold text-on-surface">Kriteria ketuntasan</span>
+                    <input value={goalForm.kriteria_tuntas} onChange={(event) => setGoalForm((current) => ({ ...current, kriteria_tuntas: event.target.value }))} placeholder="Contoh: Tuntas jika benar 8 dari 10 soal" className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-surface-container-low px-4 py-3" />
+                  </label>
+                  {goalForm.jenis_target === 'akademik' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <label><span className="text-sm font-bold">Jawaban benar target</span><input type="number" min="0" value={goalForm.skor_benar_target} onChange={(event) => setGoalForm((current) => ({ ...current, skor_benar_target: event.target.value }))} placeholder="8" className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" /></label>
+                      <label><span className="text-sm font-bold">Total soal / tugas</span><input type="number" min="1" value={goalForm.skor_total_target} onChange={(event) => setGoalForm((current) => ({ ...current, skor_total_target: event.target.value }))} placeholder="10" className="mt-2 w-full rounded-2xl border bg-surface-container-low px-4 py-3" /></label>
+                    </div>
+                  )}
+                </div>
+              )}
+              {editingGoal && (
+                <div className="rounded-2xl bg-tertiary-fixed/25 p-4 space-y-3">
+                  <label className="block">
+                    <span className="text-sm font-bold text-on-surface">Catatan hasil evaluasi</span>
+                    <textarea value={goalForm.catatan_evaluasi} onChange={(event) => setGoalForm((current) => ({ ...current, catatan_evaluasi: event.target.value }))} rows={2} placeholder="Perubahan yang terlihat dan alasan revisi" className="mt-2 w-full resize-none rounded-2xl border border-outline-variant/40 bg-white px-4 py-3 outline-none focus:border-primary" />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-bold text-on-surface">Tindak lanjut</span>
+                    <select value={goalForm.tindak_lanjut} onChange={(event) => setGoalForm((current) => ({ ...current, tindak_lanjut: event.target.value }))} className="mt-2 w-full rounded-2xl border border-outline-variant/40 bg-white px-4 py-3 outline-none focus:border-primary">
+                      <option value="lanjutkan">Lanjutkan program</option>
+                      <option value="revisi">Revisi dan pantau kembali</option>
+                      <option value="tercapai">Tujuan tercapai</option>
+                      <option value="hentikan">Hentikan tujuan</option>
+                    </select>
+                  </label>
+                </div>
+              )}
             </div>
 
             {goalError && <p className="mt-4 rounded-2xl bg-error-container/60 px-4 py-3 text-sm font-medium text-error">{goalError}</p>}
