@@ -78,31 +78,15 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
 
   const academic = goals.filter((goal) => goal.jenis_target === 'akademik')
   const nonAcademic = goals.filter((goal) => goal.jenis_target === 'non_akademik')
-  const calculateGoalValue = (goal: Goal) => {
-    const logs = tracking.filter((item) => item.tujuan_ppi_id === goal.id)
-    if (logs.length === 0) return null
-    if (goal.jenis_target === 'akademik') {
-      const attempts = new Map<string, { benar: number; total: number }>()
-      logs.forEach((item) => {
-        if (item.benar !== null && item.total) attempts.set(item.tanggal, { benar: item.benar, total: item.total })
-      })
-      const values = Array.from(attempts.values())
-      const correct = values.reduce((sum, item) => sum + item.benar, 0)
-      const total = values.reduce((sum, item) => sum + item.total, 0)
-      return total > 0 ? Math.round((correct / total) * 100) : null
-    }
-    const scores = logs.map((item) => Number(TRACKING_LEVELS.find((level) => level.code === item.kode_bantuan)?.score || 0))
-    return scores.length > 0 ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null
-  }
   const average = (items: Goal[]) => {
-    const values = items.map(calculateGoalValue).filter((value): value is number => value !== null)
-    return values.length > 0 ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : null
+    const values = items.map((g) => g.capaian).filter((v) => v > 0)
+    return values.length > 0 ? Math.round(values.reduce((sum, v) => sum + v, 0) / values.length) : null
   }
   const academicAverage = average(academic)
   const nonAcademicAverage = average(nonAcademic)
   const buildDetails = (items: Goal[]): AchievementDetail[] => items.map((goal) => {
     const logs = tracking.filter((item) => item.tujuan_ppi_id === goal.id)
-    const computedValue = calculateGoalValue(goal) ?? 0
+    const computedValue = goal.capaian
     if (goal.jenis_target === 'akademik') {
       const attempts = new Map<string, { benar: number; total: number }>()
       logs.forEach((item) => {
@@ -211,7 +195,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
       <section className="mt-4 rounded-3xl border bg-white p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3"><div><div className="text-xs font-bold text-primary">TARGET PPI</div><h2 className="mt-1 text-xl font-bold">Ketercapaian individual</h2></div><a href={`/dashboard/siswa/${params.id}/ppi`} className="rounded-full bg-primary/10 px-4 py-2 text-sm font-bold text-primary">Kelola PPI</a></div>
         <div className="mt-5 space-y-4">{goals.map((goal) => {
-          const value = calculateGoalValue(goal)
+          const value = goal.capaian || null
           return <div key={goal.id} className="rounded-2xl bg-surface-container-low p-4">
             <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-xs font-bold text-primary">{goal.area}{goal.fase_adaptasi ? ` · CP Fase ${goal.fase_adaptasi}` : ''}</div><div className="mt-1 font-bold">{goal.tujuan}</div><div className="mt-1 text-xs text-on-surface-variant">{goal.kriteria_tuntas}</div></div><div className="text-right"><div className="text-2xl font-bold">{value === null ? '—' : `${value}%`}</div>{value === null && <div className="text-[10px] text-on-surface-variant">Belum ditracking</div>}</div></div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-primary" style={{ width: `${value ?? 0}%` }} /></div>
