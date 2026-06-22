@@ -98,46 +98,48 @@ export default function PpiDocumentPage({ params }: { params: { id: string } }) 
   return <div className="min-h-screen bg-[#F3F3EE] print:bg-white">
     <header className="app-header print:hidden"><nav className="app-nav"><a href={`/dashboard/siswa/${params.id}/ppi`} className="text-on-surface-variant">← Target PPI</a><BrandLogo compact mobileIconOnly /><button onClick={() => window.print()} className="rounded-full bg-primary px-4 py-2 text-sm font-bold text-white"><FileDown className="mr-2 inline h-4 w-4" />Cetak / PDF</button></nav></header>
 
-    <main className="mx-auto max-w-[900px] px-4 pb-16 pt-24 sm:pt-28 print:max-w-none print:p-0">
-      <article className="rounded-3xl bg-white p-6 shadow-sm sm:p-10 print:rounded-none print:p-0 print:shadow-none">
-        <div className="border-b-2 border-on-surface pb-5 text-center">
+    <main className="mx-auto max-w-[860px] px-3 pb-16 pt-24 sm:px-4 sm:pt-28 print:max-w-none print:p-0">
+      <article className="ppi-document overflow-hidden rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-sm sm:p-10 print:overflow-visible print:rounded-none print:border-0 print:p-0 print:shadow-none">
+        <div className="border-b-[3px] border-on-surface pb-5 text-center">
           <div className="text-sm font-bold tracking-wide">DOKUMEN PROGRAM PEMBELAJARAN INDIVIDUAL (PPI)</div>
           <h1 className="mt-2 text-2xl font-bold">Kontrak Layanan Pendidikan Individual</h1>
           <p className="mt-1 text-sm text-on-surface-variant">IncluEdu · Tahun Ajaran {student.kelas?.tahun_ajaran || '—'}</p>
         </div>
 
-        <section className="mt-6">
-          <h2 className="text-sm font-bold">A. Identitas Peserta Didik</h2>
-          <dl className="mt-3 grid grid-cols-[150px_1fr] gap-x-4 gap-y-2 text-sm">
+        <section className="document-section mt-6">
+          <h2 className="document-heading">A. Identitas Peserta Didik</h2>
+          <dl className="document-details text-sm">
             <dt>Nama</dt><dd className="font-semibold">{student.nama}</dd>
             <dt>Kelas</dt><dd>{student.kelas?.nama || '—'} · {student.kelas?.jenjang || '—'}</dd>
-            <dt>Kebutuhan</dt><dd>{student.kategori.replaceAll('_', ' ')}</dd>
-            <dt>Status informasi</dt><dd>{student.status_diagnosis.replaceAll('_', ' ')}</dd>
+            <dt>Kebutuhan</dt><dd className="capitalize">{student.kategori.replaceAll('_', ' ')}</dd>
+            <dt>Status informasi</dt><dd className="capitalize">{student.status_diagnosis.replaceAll('_', ' ')}</dd>
             <dt>Periode PPI</dt><dd>{ppi.periode_mulai} sampai {ppi.periode_selesai}</dd>
           </dl>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-sm font-bold">B. Ringkasan Hasil Asesmen</h2>
-          <p className="mt-3 text-sm leading-relaxed">{summary?.ringkasan || student.deskripsi_kebutuhan || 'Ringkasan asesmen belum tersedia.'}</p>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div><h3 className="text-xs font-bold">KEKUATAN</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{(summary?.kekuatan || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
-            <div><h3 className="text-xs font-bold">KEBUTUHAN DUKUNGAN</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{(summary?.kebutuhan || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
+        <section className="document-section mt-6">
+          <h2 className="document-heading">B. Ringkasan Hasil Asesmen</h2>
+          <div className="document-body">
+            <p className="text-sm leading-relaxed">{summary?.ringkasan || student.deskripsi_kebutuhan || 'Ringkasan asesmen belum tersedia.'}</p>
+            <div className="mt-4 grid gap-5 sm:grid-cols-2">
+              <div><h3 className="text-xs font-bold">KEKUATAN</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{(summary?.kekuatan || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
+              <div><h3 className="text-xs font-bold">KEBUTUHAN DUKUNGAN</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{(summary?.kebutuhan || []).map((item) => <li key={item}>{item}</li>)}</ul></div>
+            </div>
           </div>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-sm font-bold">C. Tujuan Jangka Panjang</h2>
-          <p className="mt-3 rounded-xl border p-4 text-sm leading-relaxed">{ppi.tujuan_jangka_panjang || 'Belum ditentukan.'}</p>
+        <section className="document-section mt-6">
+          <h2 className="document-heading">C. Tujuan Jangka Panjang</h2>
+          <p className="document-body text-sm leading-relaxed">{ppi.tujuan_jangka_panjang || 'Belum ditentukan.'}</p>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-sm font-bold">D. Tujuan Jangka Pendek dan Layanan</h2>
-          <div className="mt-3 space-y-4">
-            {goals.map((goal, index) => <div key={goal.id} className="break-inside-avoid rounded-xl border p-4">
-              <div className="text-xs font-bold">{index + 1}. {goal.area.toUpperCase()} · {goal.jenis_target === 'akademik' ? `AKADEMIK${goal.fase_adaptasi ? ` · CP FASE ${goal.fase_adaptasi}` : ''}` : 'NON-AKADEMIK'}</div>
-              <p className="mt-2 font-semibold">{goal.tujuan}</p>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-[160px_1fr]">
+        <section className="document-section mt-6">
+          <h2 className="document-heading">D. Tujuan Jangka Pendek dan Layanan</h2>
+          <div className="document-body space-y-5">
+            {goals.map((goal, index) => <div key={goal.id} className="goal-document break-inside-avoid border border-on-surface/20">
+              <div className="border-b border-on-surface/30 bg-surface-container-low px-4 py-3 text-xs font-bold print:bg-[#eeeeee]">{index + 1}. {goal.area.toUpperCase()} · {goal.jenis_target === 'akademik' ? `AKADEMIK${goal.fase_adaptasi ? ` · CP FASE ${goal.fase_adaptasi}` : ''}` : 'NON-AKADEMIK'}</div>
+              <p className="border-b border-on-surface/20 px-4 py-3 font-semibold">{goal.tujuan}</p>
+              <dl className="goal-details text-sm">
                 <dt>Indikator</dt><dd>{goal.indikator}</dd>
                 <dt>Kriteria ketuntasan</dt><dd>{goal.kriteria_tuntas || `Minimal ${goal.target}%`}</dd>
                 <dt>Aktivitas</dt><dd>{goal.aktivitas || 'Belum ditentukan.'}</dd>
@@ -149,29 +151,33 @@ export default function PpiDocumentPage({ params }: { params: { id: string } }) 
           </div>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-sm font-bold">E. Strategi dan Akomodasi Pembelajaran</h2>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">{(ppi.strategi || []).length > 0 ? ppi.strategi.map((item) => <li key={item}>{item}</li>) : <li>Strategi khusus belum dicatat.</li>}</ul>
+        <section className="document-section mt-6">
+          <h2 className="document-heading">E. Strategi dan Akomodasi Pembelajaran</h2>
+          <div className="document-body"><ul className="list-disc space-y-1 pl-5 text-sm">{(ppi.strategi || []).length > 0 ? ppi.strategi.map((item) => <li key={item}>{item}</li>) : <li>Strategi khusus belum dicatat.</li>}</ul></div>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-sm font-bold">F. Tim PPI</h2>
-          <table className="mt-3 w-full border-collapse text-left text-sm">
-            <thead><tr><th className="border p-2">Peran</th><th className="border p-2">Nama</th></tr></thead>
-            <tbody>{team.map((member) => <tr key={`${member.peran}-${member.nama}`}><td className="border p-2">{roleLabels[member.peran] || member.peran}</td><td className="border p-2">{member.nama}</td></tr>)}</tbody>
-          </table>
-        </section>
-
-        <section className="mt-8 break-inside-avoid border-t-2 border-on-surface pt-5">
-          <h2 className="text-sm font-bold">G. Persetujuan</h2>
-          <p className="mt-3 text-sm leading-relaxed">Dokumen ini menjadi kesepakatan layanan antara sekolah dan orang tua/wali. Tim PPI akan meninjau pelaksanaannya berdasarkan perkembangan peserta didik.</p>
-          {ppi.catatan_persetujuan && <p className="mt-3 text-sm"><strong>Catatan:</strong> {ppi.catatan_persetujuan}</p>}
-          <div className="mt-10 grid grid-cols-2 gap-8 text-center text-sm sm:grid-cols-3">
-            <div><p>Guru kelas</p><div className="h-20" /><p className="border-t pt-2">{team.find((item) => item.peran === 'guru_kelas')?.nama || user.nama}</p></div>
-            <div><p>Orang tua / wali</p><div className="h-20" /><p className="border-t pt-2">{ppi.nama_penyetuju || team.find((item) => item.peran === 'orang_tua')?.nama || '................................'}</p></div>
-            <div className="col-span-2 sm:col-span-1"><p>Kepala sekolah</p><div className="h-20" /><p className="border-t pt-2">{team.find((item) => item.peran === 'kepala_sekolah')?.nama || '................................'}</p></div>
+        <section className="document-section mt-6">
+          <h2 className="document-heading">F. Tim PPI</h2>
+          <div className="document-body">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead><tr><th className="border border-on-surface/40 bg-surface-container-low p-2.5 print:bg-[#eeeeee]">Peran</th><th className="border border-on-surface/40 bg-surface-container-low p-2.5 print:bg-[#eeeeee]">Nama</th></tr></thead>
+              <tbody>{team.map((member) => <tr key={`${member.peran}-${member.nama}`}><td className="border border-on-surface/40 p-2.5">{roleLabels[member.peran] || member.peran}</td><td className="border border-on-surface/40 p-2.5">{member.nama}</td></tr>)}</tbody>
+            </table>
           </div>
-          <p className="mt-8 text-center text-xs text-on-surface-variant">{ppi.status === 'aktif' ? `Disetujui pada ${ppi.tanggal_persetujuan} oleh ${ppi.nama_penyetuju}.` : 'Status: Draf — menunggu persetujuan orang tua / wali.'}</p>
+        </section>
+
+        <section className="document-section mt-6 break-inside-avoid">
+          <h2 className="document-heading">G. Persetujuan</h2>
+          <div className="document-body">
+            <p className="text-sm leading-relaxed">Dokumen ini menjadi kesepakatan layanan antara sekolah dan orang tua/wali. Tim PPI akan meninjau pelaksanaannya berdasarkan perkembangan peserta didik.</p>
+            {ppi.catatan_persetujuan && <p className="mt-3 text-sm"><strong>Catatan:</strong> {ppi.catatan_persetujuan}</p>}
+            <div className="mt-8 grid grid-cols-2 gap-8 text-center text-sm sm:grid-cols-3">
+              <div><p className="font-semibold">Guru kelas</p><div className="h-20" /><p className="border-t pt-2">{team.find((item) => item.peran === 'guru_kelas')?.nama || user.nama}</p></div>
+              <div><p className="font-semibold">Orang tua / wali</p><div className="h-20" /><p className="border-t pt-2">{ppi.nama_penyetuju || team.find((item) => item.peran === 'orang_tua')?.nama || '................................'}</p></div>
+              <div className="col-span-2 sm:col-span-1"><p className="font-semibold">Kepala sekolah</p><div className="h-20" /><p className="border-t pt-2">{team.find((item) => item.peran === 'kepala_sekolah')?.nama || '................................'}</p></div>
+            </div>
+            <p className="mt-8 text-center text-xs text-on-surface-variant">{ppi.status === 'aktif' ? `Disetujui pada ${ppi.tanggal_persetujuan} oleh ${ppi.nama_penyetuju}.` : 'Status: Draf — menunggu persetujuan orang tua / wali.'}</p>
+          </div>
         </section>
       </article>
     </main>
