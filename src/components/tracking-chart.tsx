@@ -24,13 +24,13 @@ type TrackingChartProps = {
 }
 
 export function TrackingChart({ tracking, goals }: TrackingChartProps) {
-  const activeIds = new Set(goals.filter((g) => g.status !== 'tercapai').map((g) => g.id))
-  const academicIds = new Set(goals.filter((g) => g.jenis_target === 'akademik' && activeIds.has(g.id)).map((g) => g.id))
-  const nonAcademicIds = new Set(goals.filter((g) => g.jenis_target === 'non_akademik' && activeIds.has(g.id)).map((g) => g.id))
+  const goalMap = new Map(goals.map((g) => [g.id, g]))
+  const academicIds = new Set(goals.filter((g) => g.jenis_target === 'akademik').map((g) => g.id))
+  const nonAcademicIds = new Set(goals.filter((g) => g.jenis_target === 'non_akademik').map((g) => g.id))
 
   const byDate = new Map<string, { akademik: number[]; nonAkademik: number[] }>()
   for (const row of tracking) {
-    if (!activeIds.has(row.tujuan_ppi_id)) continue
+    if (!goalMap.has(row.tujuan_ppi_id)) continue
     const dateKey = row.tanggal.slice(0, 10)
     if (!byDate.has(dateKey)) byDate.set(dateKey, { akademik: [], nonAkademik: [] })
     const bucket = byDate.get(dateKey)!
@@ -54,11 +54,12 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
   const hasNonAcademic = points.some((p) => p.nonAkademik !== null)
 
   if (points.length === 0 || (!hasAcademic && !hasNonAcademic)) {
+    const matched = tracking.filter((r) => goalMap.has(r.tujuan_ppi_id)).length
     return (
       <div className="rounded-2xl bg-surface-container-low p-6 text-center text-sm text-on-surface-variant">
         {tracking.length === 0
           ? 'Belum ada data tracking.'
-          : `Data tracking tersedia (${tracking.length} catatan) tetapi tidak ada yang cocok dengan goal aktif.`}
+          : `Data tracking (${tracking.length}) tidak menghasilkan grafik. ${matched} catatan cocok dengan goal — mungkin belum ada nilai akademik (benar/total) atau level bantuan non-akademik yang tercatat.`}
       </div>
     )
   }
