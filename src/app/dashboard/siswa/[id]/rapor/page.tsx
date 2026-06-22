@@ -6,7 +6,7 @@ import { CheckCircle2, FileDown, Sparkles } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
-import { expectedPhaseFromClass, TRACKING_LEVELS, type CurriculumPhase } from '@/lib/ppi-v2-data'
+import { expectedPhaseFromClass, type CurriculumPhase } from '@/lib/ppi-v2-data'
 import { supabase } from '@/lib/supabase'
 
 type Goal = {
@@ -14,6 +14,8 @@ type Goal = {
   area: string
   tujuan: string
   target: number
+  capaian: number
+  status: string
   jenis_target: 'akademik' | 'non_akademik'
   cp_id: string | null
   fase_adaptasi: string | null
@@ -67,7 +69,7 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
       setTeam(teamResult.data || [])
       if (ppiResult.data) {
         const [{ data }, { data: cpRows }] = await Promise.all([
-          supabase.from('tujuan_ppi').select('id, area, tujuan, target, jenis_target, cp_id, fase_adaptasi, kriteria_tuntas').eq('ppi_id', ppiResult.data.id).order('created_at'),
+          supabase.from('tujuan_ppi').select('id, area, tujuan, target, capaian, status, jenis_target, cp_id, fase_adaptasi, kriteria_tuntas').eq('ppi_id', ppiResult.data.id).order('created_at'),
           supabase.from('curriculum_cp').select('id, mata_pelajaran, nama_elemen'),
         ])
         setGoals((data || []) as Goal[])
@@ -79,23 +81,9 @@ export default function EvaluasiRaporPage({ params }: { params: { id: string } }
   }, [user, authLoading, router, params.id])
 
   const results = useMemo<Result[]>(() => goals.map((goal) => {
-    const logs = tracking.filter((item) => item.tujuan_ppi_id === goal.id)
-    let value = 0
-    if (goal.jenis_target === 'akademik') {
-      const bySession = new Map<number, { benar: number; total: number }>()
-      logs.forEach((item) => {
-        if (item.benar !== null && item.total) bySession.set(item.sesi_ke, { benar: item.benar, total: item.total })
-      })
-      const attempts = Array.from(bySession.values())
-      const correct = attempts.reduce((sum, item) => sum + item.benar, 0)
-      const total = attempts.reduce((sum, item) => sum + item.total, 0)
-      value = total ? Math.round((correct / total) * 100) : 0
-    } else {
-      const scores: number[] = logs.map((item) => Number(TRACKING_LEVELS.find((level) => level.code === item.kode_bantuan)?.score || 0))
-      value = scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : 0
-    }
+    const value = goal.capaian
     return { ...goal, value, recommendation: value >= goal.target ? 'lanjut' : 'remedial' }
-  }), [goals, tracking])
+  }), [goals])
 
   if (authLoading || !user || loading) return <FullPageLoading label="Menghitung evaluasi PPI..." />
 
