@@ -110,7 +110,6 @@ export function TrackingChart({ tracking, goals }: TrackingChartProps) {
               {l.data.map((v, i) => v !== null ? (
                 <g key={`${l.key}-${i}`}>
                   <circle cx={xPos(i)} cy={yPos(v)} r="7" fill={l.color} stroke="white" strokeWidth="2" />
-                  <text x={xPos(i)} y={yPos(v) - 12} textAnchor="middle" className="fill-[#4a4455] text-[11px] font-bold">{v}%</text>
                   <title>{`${l.label} ${shortDate(points[i].date)}: ${v}%`}</title>
                 </g>
               ) : null)}
