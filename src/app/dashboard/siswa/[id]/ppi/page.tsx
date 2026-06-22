@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { BrandLogo } from '@/components/brand-logo'
-import { CalendarDays, CheckCircle2, ClipboardList, FileDown, ListChecks, Pencil, Plus, Target, Users, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronDown, ClipboardList, FileDown, ListChecks, Pencil, Plus, Target, Users, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { PpiGoal } from '@/lib/ppi-data'
 import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
@@ -78,6 +78,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
   const [showDetail, setShowDetail] = useState(false)
   const [pengayaanGoal, setPengayaanGoal] = useState<PpiGoal | null>(null)
   const [generatingPengayaan, setGeneratingPengayaan] = useState(false)
+  const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
@@ -451,72 +452,75 @@ export default function PpiPage({ params }: { params: { id: string } }) {
               const status = statusMap[goal.status]
               const identity = goalIdentity(goal)
               return (
-                <article key={goal.id} className="bg-white rounded-3xl border border-outline-variant/20 p-5 sm:p-md">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div>
-                      <span className="text-xs font-bold text-primary">{identity.title.toUpperCase()}</span>
+                <article key={goal.id} className="bg-white rounded-3xl border border-outline-variant/20">
+                  <button type="button" onClick={() => setExpandedGoals((prev) => { const next = new Set(prev); if (next.has(goal.id)) next.delete(goal.id); else next.add(goal.id); return next })} className="w-full flex items-center justify-between gap-3 p-5 sm:p-md text-left">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-primary">{identity.title.toUpperCase()}</span>
+                        <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${status.style}`}>{status.label}</span>
+                      </div>
                       <h3 className="text-lg font-bold mt-1">{goal.tujuan}</h3>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">{goal.jenis_target === 'akademik' ? 'Target akademik' : 'Target non-akademik'}</span>
-                        {goal.jenis_target === 'akademik' && classPhase && <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">Fase kelas {classPhase}</span>}
-                        {goal.fase_adaptasi && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Adaptasi CP Fase {goal.fase_adaptasi}</span>}
+                      <div className="mt-2 flex items-center gap-3 text-sm">
+                        <span className="font-bold">{goal.capaian}%</span>
+                        <span className="h-2 flex-1 max-w-[160px] rounded-full bg-surface-container-high overflow-hidden"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min((goal.capaian / goal.target) * 100, 100)}%` }} /></span>
                       </div>
                     </div>
-                    <span className={`w-fit px-3 py-1.5 rounded-full text-xs font-bold ${status.style}`}>{status.label}</span>
-                  </div>
-                  <div className="mt-4 rounded-2xl bg-surface-container-low p-4">
-                    <div className="text-xs font-bold text-on-surface-variant mb-1">INDIKATOR KEBERHASILAN</div>
-                    <p className="text-sm">{goal.indikator}</p>
-                  </div>
-                  <div className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-2xl border border-outline-variant/20 p-4">
-                      <div className="text-xs font-bold text-on-surface-variant">AKTIVITAS</div>
-                      <p className="mt-1">{goal.aktivitas || 'Belum ditentukan.'}</p>
+                    <ChevronDown className={`w-5 h-5 shrink-0 text-on-surface-variant transition-transform ${expandedGoals.has(goal.id) ? '' : '-rotate-90'}`} />
+                  </button>
+                  {expandedGoals.has(goal.id) && <div className="px-5 sm:px-md pb-5 sm:pb-md space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">{goal.jenis_target === 'akademik' ? 'Target akademik' : 'Target non-akademik'}</span>
+                      {goal.jenis_target === 'akademik' && classPhase && <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">Fase kelas {classPhase}</span>}
+                      {goal.fase_adaptasi && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Adaptasi CP Fase {goal.fase_adaptasi}</span>}
                     </div>
-                    <div className="rounded-2xl border border-outline-variant/20 p-4">
-                      <div className="text-xs font-bold text-on-surface-variant">MEDIA DAN PELAKSANA</div>
-                      <p className="mt-1">{goal.media_alat || 'Media belum ditentukan.'}</p>
-                      <p className="mt-1 text-on-surface-variant">{goal.pelaksana || 'Guru kelas'}{goal.frekuensi ? ` · ${goal.frekuensi}` : ''}</p>
+                    <div className="rounded-2xl bg-surface-container-low p-4">
+                      <div className="text-xs font-bold text-on-surface-variant mb-1">INDIKATOR KEBERHASILAN</div>
+                      <p className="text-sm">{goal.indikator}</p>
                     </div>
-                  </div>
-                  <div className="mt-3 rounded-2xl bg-primary/5 p-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-primary"><ListChecks className="w-4 h-4" /> ANALISIS TUGAS</div>
-                    {Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? (
-                      <ol className="mt-2 space-y-1 text-sm list-decimal pl-5">
-                        {goal.langkah_tugas.map((step) => <li key={step}>{step}</li>)}
-                      </ol>
-                    ) : (
-                      <p className="mt-2 text-sm text-on-surface-variant">Tujuan lama ini belum dipecah menjadi langkah kecil. Gunakan tombol evaluasi atau revisi untuk menambahkan analisis tugas.</p>
-                    )}
-                    <p className="mt-2 text-xs text-on-surface-variant">Evaluasi: {goal.metode_evaluasi || 'Observasi kinerja'}</p>
-                  </div>
-                  <div className="mt-4">
-                    <div className="flex justify-between text-sm font-bold mb-2"><span>Capaian saat ini</span><span>{goal.capaian}% dari target {goal.target}%</span></div>
-                    <div className="h-3 bg-surface-container-high rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${Math.min((goal.capaian / goal.target) * 100, 100)}%` }} /></div>
-                  </div>
-                  <div className="mt-3 rounded-2xl border border-outline-variant/20 p-4">
-                    <div className="text-xs font-bold text-on-surface-variant">KRITERIA KETUNTASAN</div>
-                    <p className="mt-1 text-sm font-semibold">{goal.kriteria_tuntas || `Tuntas apabila mencapai ${goal.target}%`}</p>
-                    {goal.jenis_target === 'akademik' && <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">Hasil tracking menjadi rekomendasi penilaian untuk {identity.subject || 'mata pelajaran terkait'}. Nilai akhir tetap ditinjau dan disahkan oleh guru.</p>}
-                  </div>
-                  {goal.status === 'tercapai' ? (
-                    <div className="mt-4 rounded-2xl bg-secondary-container/50 p-4 text-center">
-                      <p className="text-sm font-bold text-secondary">Tujuan tercapai ✓</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">Goal ini sudah ditandai tuntas.</p>
-                      <button type="button" onClick={() => setPengayaanGoal(goal)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"><Plus className="w-4 h-4" /> Buat pengayaan</button>
+                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-2xl border border-outline-variant/20 p-4">
+                        <div className="text-xs font-bold text-on-surface-variant">AKTIVITAS</div>
+                        <p className="mt-1">{goal.aktivitas || 'Belum ditentukan.'}</p>
+                      </div>
+                      <div className="rounded-2xl border border-outline-variant/20 p-4">
+                        <div className="text-xs font-bold text-on-surface-variant">MEDIA DAN PELAKSANA</div>
+                        <p className="mt-1">{goal.media_alat || 'Media belum ditentukan.'}</p>
+                        <p className="mt-1 text-on-surface-variant">{goal.pelaksana || 'Guru kelas'}{goal.frekuensi ? ` · ${goal.frekuensi}` : ''}</p>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-                      <button type="button" onClick={() => openEditGoal(goal)} className="inline-flex items-center gap-2 text-sm font-bold text-primary">
-                        <Pencil className="w-4 h-4" /> Evaluasi atau revisi
-                      </button>
-                      {goal.capaian >= goal.target && (
-                        <button type="button" onClick={() => markGoalComplete(goal)} className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-bold text-white">
-                          <CheckCircle2 className="w-4 h-4" /> Tandai tuntas
-                        </button>
+                    <div className="rounded-2xl bg-primary/5 p-4">
+                      <div className="flex items-center gap-2 text-xs font-bold text-primary"><ListChecks className="w-4 h-4" /> ANALISIS TUGAS</div>
+                      {Array.isArray(goal.langkah_tugas) && goal.langkah_tugas.length > 0 ? (
+                        <ol className="mt-2 space-y-1 text-sm list-decimal pl-5">{goal.langkah_tugas.map((step) => <li key={step}>{step}</li>)}</ol>
+                      ) : (
+                        <p className="mt-2 text-sm text-on-surface-variant">Tujuan lama ini belum dipecah menjadi langkah kecil. Gunakan tombol evaluasi atau revisi untuk menambahkan analisis tugas.</p>
                       )}
+                      <p className="mt-2 text-xs text-on-surface-variant">Evaluasi: {goal.metode_evaluasi || 'Observasi kinerja'}</p>
                     </div>
-                  )}
+                    <div className="rounded-2xl border border-outline-variant/20 p-4">
+                      <div className="text-xs font-bold text-on-surface-variant">KRITERIA KETUNTASAN</div>
+                      <p className="mt-1 text-sm font-semibold">{goal.kriteria_tuntas || `Tuntas apabila mencapai ${goal.target}%`}</p>
+                      {goal.jenis_target === 'akademik' && <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">Hasil tracking menjadi rekomendasi penilaian untuk {identity.subject || 'mata pelajaran terkait'}. Nilai akhir tetap ditinjau dan disahkan oleh guru.</p>}
+                    </div>
+                    {goal.status === 'tercapai' ? (
+                      <div className="rounded-2xl bg-secondary-container/50 p-4 text-center">
+                        <p className="text-sm font-bold text-secondary">Tujuan tercapai ✓</p>
+                        <p className="mt-1 text-xs text-on-surface-variant">Goal ini sudah ditandai tuntas.</p>
+                        <button type="button" onClick={() => setPengayaanGoal(goal)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white"><Plus className="w-4 h-4" /> Buat pengayaan</button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button type="button" onClick={() => openEditGoal(goal)} className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+                          <Pencil className="w-4 h-4" /> Evaluasi atau revisi
+                        </button>
+                        {goal.capaian >= goal.target && (
+                          <button type="button" onClick={() => markGoalComplete(goal)} className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-bold text-white">
+                            <CheckCircle2 className="w-4 h-4" /> Tandai tuntas
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>}
                 </article>
               )
             })}
