@@ -40,6 +40,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
   const [completed, setCompleted] = useState(false)
   const [error, setError] = useState('')
   const [alerts, setAlerts] = useState<Array<{ goal: string; summary: string; suggestions: string[] }>>([])
+  const [trackingDate, setTrackingDate] = useState(new Date().toISOString().slice(0, 10))
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
@@ -92,7 +93,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
       siswa_id: params.id,
       tujuan_ppi_id: currentGoal.id,
       guru_id: user.id,
-      tanggal: new Date().toISOString().slice(0, 10),
+      tanggal: trackingDate,
       sesi_ke: sessionNumber,
       langkah_index: index,
       langkah_label: step,
@@ -173,6 +174,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
         setTotal('')
         setNote('')
         setAlerts([])
+        setTrackingDate(new Date().toISOString().slice(0, 10))
         setCompleted(false)
       }} className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 font-bold text-white">
         Lanjut Tracking {sessionNumber + 1}<ArrowRight className="ml-2 h-4 w-4" />
@@ -183,7 +185,7 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
   return <div className="min-h-screen bg-[#FAFAF5]">
     <header className="app-header"><nav className="app-nav"><a href={`/dashboard/siswa/${params.id}`} className="text-on-surface-variant">← Profil</a><BrandLogo compact mobileIconOnly /><span className="text-sm font-bold text-primary">{goalIndex + 1}/{goals.length} target</span></nav></header>
     <main className="mx-auto max-w-3xl px-4 pb-20 pt-24 sm:pt-28">
-      <div className="mb-5"><div className="text-xs font-bold text-primary">TRACKING {sessionNumber}</div><h1 className="mt-1 text-3xl font-bold">{studentName}</h1><p className="mt-1 text-on-surface-variant">Selesaikan seluruh target untuk menutup Tracking {sessionNumber}.</p></div>
+      <div className="mb-5"><div className="text-xs font-bold text-primary">TRACKING {sessionNumber}</div><h1 className="mt-1 text-3xl font-bold">{studentName}</h1><p className="mt-1 text-on-surface-variant">Selesaikan seluruh target untuk menutup Tracking {sessionNumber}.</p><label className="mt-3 flex items-center gap-2 text-sm"><span className="font-bold text-on-surface-variant">Tanggal:</span><input type="date" value={trackingDate} onChange={(event) => setTrackingDate(event.target.value)} className="rounded-xl border border-outline-variant/40 bg-white px-3 py-2 text-sm" /></label></div>
       <section className="rounded-3xl border border-outline-variant/20 bg-white p-5 sm:p-6">
         <div className="flex flex-wrap gap-2"><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{currentGoal.jenis_target === 'akademik' ? 'Akademik' : 'Non-akademik'}</span><span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">{currentGoal.area}</span></div>
         <h2 className="mt-3 text-xl font-bold">{currentGoal.tujuan}</h2>
