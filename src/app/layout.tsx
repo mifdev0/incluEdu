@@ -11,7 +11,8 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth">
       <head>
-        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="icon" href="/logo.png" sizes="32x32" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
       </head>
       <body className="font-body text-body-md overflow-x-hidden bg-[#FAFAF5]">
         <AuthProvider>
