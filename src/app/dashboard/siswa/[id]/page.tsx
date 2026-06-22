@@ -175,6 +175,15 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
       </section>}
 
       <section className="mt-4 rounded-3xl border bg-white p-5 sm:p-6">
+        <div className="text-xs font-bold text-primary">GRAFIK TRACKING</div>
+        <h2 className="mt-1 text-xl font-bold">Perkembangan harian</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">Nilai rata-rata akademik dan non-akademik setiap sesi tracking. Setiap tracking baru menambah satu titik.</p>
+        <div className="mt-5">
+          <TrackingChart tracking={tracking} goals={goals} />
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-3xl border bg-white p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3"><div><div className="text-xs font-bold text-primary">TARGET PPI</div><h2 className="mt-1 text-xl font-bold">Ketercapaian individual</h2></div><a href={`/dashboard/siswa/${params.id}/ppi`} className="rounded-full bg-primary/10 px-4 py-2 text-sm font-bold text-primary">Kelola PPI</a></div>
         <div className="mt-5 space-y-4">{goals.map((goal) => {
           const value = calculateGoalValue(goal)
@@ -183,15 +192,6 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-primary" style={{ width: `${value ?? 0}%` }} /></div>
           </div>
         })}</div>
-      </section>
-
-      <section className="mt-4 rounded-3xl border bg-white p-5 sm:p-6">
-        <div className="text-xs font-bold text-primary">GRAFIK TRACKING</div>
-        <h2 className="mt-1 text-xl font-bold">Perkembangan harian</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Nilai rata-rata akademik dan non-akademik setiap sesi tracking.</p>
-        <div className="mt-5">
-          <TrackingChart tracking={tracking} goals={goals} />
-        </div>
       </section>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
