@@ -79,7 +79,7 @@ export default function ProfilSiswaPage({ params }: { params: { id: string } }) 
   const academic = goals.filter((goal) => goal.jenis_target === 'akademik')
   const nonAcademic = goals.filter((goal) => goal.jenis_target === 'non_akademik')
   const average = (items: Goal[]) => {
-    const values = items.map((g) => g.capaian).filter((v) => v > 0)
+    const values = items.map((g) => g.capaian).filter((v) => v !== null && v !== undefined)
     return values.length > 0 ? Math.round(values.reduce((sum, v) => sum + v, 0) / values.length) : null
   }
   const academicAverage = average(academic)
