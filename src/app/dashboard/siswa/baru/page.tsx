@@ -356,7 +356,7 @@ export default function TambahSiswaPage() {
             <div className="text-xs font-bold text-primary">REKOMENDASI ADAPTASI CP</div>
             <h2 className="mt-1 text-lg font-bold">Fase kemampuan awal yang disarankan</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
-              {expectedPhase ? `Fase kelas administratif diperkirakan ${expectedPhase}. ` : ''}
+              {expectedPhase ? `Fase berdasarkan kelas adalah ${expectedPhase}. ` : ''}
               Setiap area dapat menggunakan fase berbeda sesuai kemampuan aktual siswa.
             </p>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -365,7 +365,7 @@ export default function TambahSiswaPage() {
                 return <div key={item.area} className="rounded-2xl bg-surface-container-low p-4">
                   <div className="flex items-center justify-between gap-2"><span className="font-bold">{item.area}</span><span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">Fase {item.fase}</span></div>
                   <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">{item.alasan}</p>
-                  {adapted && <div className="mt-3 text-xs font-bold text-tertiary">Adaptasi dari fase kelas {expectedPhase} ke Fase {item.fase}</div>}
+                  {adapted && <div className="mt-3 text-xs font-bold text-tertiary">Target disesuaikan dari Fase {expectedPhase} ke Fase {item.fase} berdasarkan kemampuan saat ini.</div>}
                 </div>
               })}
             </div>
