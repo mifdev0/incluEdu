@@ -15,6 +15,8 @@ type Goal = {
   tujuan: string
   indikator: string
   target: number
+  capaian: number
+  status: string
   jenis_target: 'akademik' | 'non_akademik'
   kriteria_tuntas: string | null
   langkah_tugas: string[]
@@ -56,8 +58,9 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
       if (ppiResult.data) {
         setPpiApproved(ppiResult.data.status === 'aktif')
         const { data } = await supabase.from('tujuan_ppi')
-          .select('id, area, tujuan, indikator, target, jenis_target, kriteria_tuntas, langkah_tugas, skor_benar_target, skor_total_target')
+          .select('id, area, tujuan, indikator, target, capaian, status, jenis_target, kriteria_tuntas, langkah_tugas, skor_benar_target, skor_total_target')
           .eq('ppi_id', ppiResult.data.id)
+          .neq('status', 'tercapai')
           .order('created_at')
         setGoals((data || []) as Goal[])
       }
@@ -134,12 +137,11 @@ export default function TrackingHarianPage({ params }: { params: { id: string } 
       }
     }
 
-    const scores: number[] = (recent || []).map((item) => Number(TRACKING_LEVELS.find((level) => level.code === item.kode_bantuan)?.score || 0))
-    const supportAchievement = scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : 0
-    const academicAchievement = currentGoal.jenis_target === 'akademik' && Number(total) > 0
-      ? Math.round((Number(correct) / Number(total)) * 100)
-      : supportAchievement
-    const achievement = Math.max(0, Math.min(100, academicAchievement))
+    const currentScores: number[] = steps.map((_, idx) => Number(TRACKING_LEVELS.find((l) => l.code === answers[`${currentGoal.id}_${idx}`])?.score || 0))
+    const nonAcademicAchievement = currentScores.length ? Math.round(currentScores.reduce((sum, s) => sum + s, 0) / currentScores.length) : 0
+    const achievement = currentGoal.jenis_target === 'akademik' && Number(total) > 0
+      ? Math.max(0, Math.min(100, Math.round((Number(correct) / Number(total)) * 100)))
+      : nonAcademicAchievement
     const status = achievement >= currentGoal.target ? 'tercapai' : achievement >= currentGoal.target * 0.8 ? 'hampir_tercapai' : achievement > 0 ? 'berkembang' : 'belum_dimulai'
     await supabase.from('tujuan_ppi').update({ capaian: achievement, status, updated_at: new Date().toISOString() }).eq('id', currentGoal.id)
 
