@@ -9,13 +9,15 @@ import { FullPageLoading, LoadingSpinner } from '@/components/loading-state'
 import { supabase } from '@/lib/supabase'
 import {
   ASSESSMENT_SCALE,
-  PHASE_DESCRIPTIONS,
   TEAM_ROLES,
+  ACADEMIC_ASSESSMENT_ITEMS,
+  NON_ACADEMIC_ASSESSMENT_ITEMS,
   buildNonAcademicGoal,
   expectedPhaseFromClass,
-  getAssessmentItemsForPhase,
   recommendCurriculumPhases,
+  type AssessmentItem,
   type AssessmentValue,
+  type CurriculumPhase,
   type PhaseRecommendation,
 } from '@/lib/ppi-v2-data'
 
@@ -83,12 +85,58 @@ export default function TambahSiswaPage() {
   const selectedClass = classes.find((item) => item.id === kelasId)
   const expectedPhase = selectedClass ? expectedPhaseFromClass(selectedClass.nama, selectedClass.jenjang, selectedClass.tingkat) : null
   const academicPhase = expectedPhase || 'A'
-  const activeAssessmentItems = useMemo(() => getAssessmentItemsForPhase(academicPhase), [academicPhase])
-  const groups = useMemo(() => Array.from(new Set(activeAssessmentItems.map((item) => item.group))), [activeAssessmentItems])
+  const [unlockedPhases, setUnlockedPhases] = useState<Record<string, CurriculumPhase[]>>({})
+  const ACADEMIC_GROUPS = ['Membaca', 'Menulis', 'Matematika']
+  useEffect(() => {
+    if (academicPhase && Object.keys(unlockedPhases).length === 0) {
+      setUnlockedPhases({ Membaca: [academicPhase], Menulis: [academicPhase], Matematika: [academicPhase] })
+    }
+  }, [academicPhase, unlockedPhases])
+  const allAssessmentItems = useMemo(() => {
+    const items: AssessmentItem[] = []
+    for (const [group, phases] of Object.entries(unlockedPhases)) {
+      for (const phase of phases) {
+        items.push(...ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === phase))
+      }
+    }
+    for (const item of NON_ACADEMIC_ASSESSMENT_ITEMS) {
+      items.push(item)
+    }
+    return items
+  }, [unlockedPhases])
+  const groups = useMemo(() => {
+    const g = new Set<string>()
+    for (const [group] of Object.entries(unlockedPhases)) g.add(group)
+    for (const item of NON_ACADEMIC_ASSESSMENT_ITEMS) g.add(item.group)
+    return Array.from(g)
+  }, [unlockedPhases])
   const requiredTeamComplete = ['guru_kelas', 'orang_tua', 'kepala_sekolah'].every((role) => team[role]?.trim())
   const identityComplete = nama.trim() && kelasId && kategori && requiredTeamComplete
-  const assessmentComplete = activeAssessmentItems.every((item) => assessment[item.key])
+  const assessmentComplete = allAssessmentItems.every((item) => assessment[item.key])
   const phaseRecommendations = recommendCurriculumPhases(assessment, academicPhase)
+
+  function updateAssessment(key: string, value: AssessmentValue, group: string, phase?: CurriculumPhase) {
+    setAssessment((current) => ({ ...current, [key]: value }))
+    if (phase && ACADEMIC_GROUPS.includes(group)) {
+      const phases = unlockedPhases[group] || [academicPhase]
+      const lowestPhase = phases[phases.length - 1]
+      const CURRICULUM_PHASES_ORDER: CurriculumPhase[] = ['A', 'B', 'C', 'D', 'E', 'F']
+      const lowestIdx = CURRICULUM_PHASES_ORDER.indexOf(lowestPhase)
+      if (lowestIdx > 0 && value === 'belum_bisa') {
+        const groupItems = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === lowestPhase)
+        const allBelumBisa = groupItems.every((i) => {
+          const val = key === i.key ? value : assessment[i.key]
+          return val === 'belum_bisa'
+        })
+        if (allBelumBisa && !phases.includes(CURRICULUM_PHASES_ORDER[lowestIdx - 1])) {
+          setUnlockedPhases((prev) => ({
+            ...prev,
+            [group]: [...prev[group], CURRICULUM_PHASES_ORDER[lowestIdx - 1]],
+          }))
+        }
+      }
+    }
+  }
 
   if (loading || !user) return <FullPageLoading label="Menyiapkan formulir PPI..." />
 
@@ -117,12 +165,12 @@ export default function TambahSiswaPage() {
     setSummarizing(true)
     setError('')
     try {
-      const responses = activeAssessmentItems.map((item) => ({
+      const responses = allAssessmentItems.map((item) => ({
         domain: item.domain,
         kelompok: item.group,
         kemampuan: item.label,
         hasil: assessment[item.key],
-        fase_uji: item.domain === 'akademik' ? academicPhase : null,
+        fase_uji: item.phase || null,
       }))
       const response = await fetch('/api/ai', {
         method: 'POST',
@@ -196,15 +244,15 @@ export default function TambahSiswaPage() {
           wajib: role.required,
           dikonfirmasi: true,
         }))
-      const assessmentRows = activeAssessmentItems.map((item) => ({
+      const assessmentRows = allAssessmentItems.map((item) => ({
         siswa_id: studentId,
         domain: item.domain,
         item_key: item.key,
         item_label: item.label,
         nilai: assessment[item.key],
-        fase_uji: item.domain === 'akademik' ? academicPhase : null,
+        fase_uji: item.phase || null,
       }))
-      const keysForGroup = (group: string) => activeAssessmentItems.filter((item) => item.group === group).map((item) => item.key)
+      const keysForGroup = (group: string) => allAssessmentItems.filter((item) => item.group === group).map((item) => item.key)
 
       const [, teamResult, assessmentResult, summaryResult] = await Promise.all([
         supabase.from('asesmen_awal').insert({
@@ -376,34 +424,39 @@ export default function TambahSiswaPage() {
 
         {step === 2 && <div className="space-y-4">
           <section className="rounded-3xl border border-primary/15 bg-primary/5 p-5 sm:p-6">
-            <div className="text-xs font-bold text-primary">FASE ASESMEN OTOMATIS</div>
+            <div className="text-xs font-bold text-primary">ASESMEN ADAPTIF</div>
             <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-bold">Asesmen akademik Fase {academicPhase}</h2>
+              <h2 className="text-lg font-bold">Penentuan fase kemampuan</h2>
               <span className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-white">{selectedClass?.nama}</span>
             </div>
             <p className="mt-1 text-sm text-on-surface-variant">
-              Fase dipilih otomatis dari tingkat kelas siswa dan tidak perlu ditentukan kembali oleh guru.
+              Nilai setiap indikator sesuai kondisi siswa. Jika semua indikator di suatu fase bernilai <strong>&quot;Belum bisa&quot;</strong>, sistem otomatis menampilkan indikator fase di bawahnya — terus berlanjut hingga ditemukan fase dengan minimal satu kemampuan.
             </p>
-            <p className="mt-3 text-xs text-on-surface-variant">
-              {PHASE_DESCRIPTIONS[academicPhase]}
-            </p>
-            <p className="mt-2 rounded-2xl bg-white/80 px-4 py-3 text-xs leading-relaxed text-on-surface-variant">
-              Asesmen awal berfokus pada fondasi membaca, menulis, dan matematika. Mata pelajaran lain dipilih pada halaman PPI melalui database Capaian Pembelajaran, lalu targetnya disesuaikan dengan hasil asesmen ini.
+            <p className="mt-2 text-xs text-on-surface-variant">
+              Setiap area (Membaca, Menulis, Matematika) bisa memiliki fase yang berbeda.
             </p>
           </section>
 
-          {groups.map((group) => <section key={group} className="rounded-3xl border border-outline-variant/20 bg-white p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-bold">{group}</h2>
-              {['Membaca', 'Menulis', 'Matematika'].includes(group) && <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Indikator Fase {academicPhase}</span>}
-            </div>
-            <div className="mt-4 space-y-4">
-              {activeAssessmentItems.filter((item) => item.group === group).map((item) => <div key={item.key}>
-                <div className="text-sm font-semibold">{item.label}</div>
-                <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">{ASSESSMENT_SCALE.map((option) => <button key={option.value} type="button" onClick={() => setAssessment((current) => ({ ...current, [item.key]: option.value }))} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${assessment[item.key] === option.value ? 'border-primary bg-primary text-white' : 'border-outline-variant/25 bg-surface-container-low'}`}>{option.label}</button>)}</div>
-              </div>)}
-            </div>
-          </section>)}
+          {groups.map((group) => {
+            const isAcademic = ACADEMIC_GROUPS.includes(group)
+            const groupPhases = isAcademic ? (unlockedPhases[group] || [academicPhase]) : []
+            const phaseLabels: Record<string, string> = { A: 'Fase A (Kelas 1-2 SD)', B: 'Fase B (Kelas 3-4 SD)', C: 'Fase C (Kelas 5-6 SD)', D: 'Fase D (SMP)', E: 'Fase E (SMA-10)', F: 'Fase F (SMA 11-12)' }
+            const phaseColors: Record<string, string> = { A: 'bg-amber-100 text-amber-800', B: 'bg-blue-100 text-blue-800', C: 'bg-green-100 text-green-800', D: 'bg-purple-100 text-purple-800', E: 'bg-pink-100 text-pink-800', F: 'bg-indigo-100 text-indigo-800' }
+            return <section key={group} className="rounded-3xl border border-outline-variant/20 bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-bold">{group}{!isAcademic && <span className="ml-2 rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">Non-akademik</span>}</h2>
+              {isAcademic && <div className="mt-2 flex flex-wrap gap-2">{groupPhases.map((ph) => <span key={ph} className={`rounded-full px-3 py-1 text-xs font-bold ${phaseColors[ph] || 'bg-primary/10 text-primary'}`}>{phaseLabels[ph] || `Fase ${ph}`}</span>)}</div>}
+              <div className="mt-4 space-y-4">
+                {allAssessmentItems.filter((item) => item.group === group).map((item) => {
+                  const ph = item.phase; const isNewPhase = isAcademic && ph && groupPhases.indexOf(ph) > 0 && allAssessmentItems.filter((i) => i.group === group && i.phase === groupPhases[groupPhases.indexOf(ph) - 1]).every((i) => assessment[i.key] === 'belum_bisa')
+                  return <div key={item.key} className={isNewPhase ? 'mt-6 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/[0.03] p-4' : ''}>
+                    {isNewPhase && <div className="mb-3 text-xs font-bold text-primary">Lanjut ke indikator Fase {item.phase} (semua indikator fase sebelumnya &quot;Belum bisa&quot;)</div>}
+                    <div className="text-sm font-semibold">{item.phase && <span className="mr-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-xs font-bold">{item.phase}</span>}{item.label}</div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">{ASSESSMENT_SCALE.map((option) => <button key={option.value} type="button" onClick={() => updateAssessment(item.key, option.value, group, item.phase)} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${assessment[item.key] === option.value ? 'border-primary bg-primary text-white' : 'border-outline-variant/25 bg-surface-container-low'}`}>{option.label}</button>)}</div>
+                  </div>
+                })}
+              </div>
+            </section>
+          })}
           <div className="grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setStep(1)} className="rounded-full bg-surface-container-high py-4 font-bold">Kembali</button><button type="button" disabled={!assessmentComplete || summarizing} onClick={summarizeAssessment} className="rounded-full bg-primary py-4 font-bold text-white disabled:opacity-40">{summarizing ? <LoadingSpinner label="Meringkas asesmen..." /> : 'Analisis hasil asesmen'}</button></div>
         </div>}
 
