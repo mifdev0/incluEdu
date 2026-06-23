@@ -370,9 +370,7 @@ export default function PpiPage({ params }: { params: { id: string } }) {
             <a href={`/dashboard/siswa/${params.id}`} className="font-label-md text-on-surface-variant">← <span className="hidden min-[390px]:inline">Profil</span></a>
             <a href="/dashboard"><BrandLogo compact mobileIconOnly /></a>
           </div>
-          {ppiStatus === 'aktif'
-            ? <a href={`/dashboard/siswa/${params.id}/observasi`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Tracking harian</a>
-            : <a href={`/dashboard/siswa/${params.id}/ppi/dokumen`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Tinjau dokumen</a>}
+          <a href={`/dashboard/siswa/${params.id}/ppi/dokumen`} className="px-3 sm:px-4 py-2 rounded-full bg-primary text-white text-sm font-bold">Dokumen PPI</a>
         </nav>
       </header>
 
