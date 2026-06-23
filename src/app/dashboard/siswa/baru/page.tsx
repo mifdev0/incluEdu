@@ -14,7 +14,6 @@ import {
   NON_ACADEMIC_ASSESSMENT_ITEMS,
   buildNonAcademicGoal,
   expectedPhaseFromClass,
-  recommendCurriculumPhases,
   type AssessmentItem,
   type AssessmentValue,
   type CurriculumPhase,
@@ -144,7 +143,31 @@ export default function TambahSiswaPage() {
   const requiredTeamComplete = ['guru_kelas', 'orang_tua', 'kepala_sekolah'].every((role) => team[role]?.trim())
   const identityComplete = nama.trim() && kelasId && kategori && requiredTeamComplete
   const assessmentComplete = visibleItems.every((item) => assessment[item.key])
-  const phaseRecommendations = recommendCurriculumPhases(assessment, academicPhase)
+
+  function getBaselinePhase(group: string): CurriculumPhase {
+    const phases = unlockedPhases[group] || [academicPhase]
+    for (const ph of [...phases].reverse()) {
+      const items = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === ph)
+      const hasAbility = items.some((i) => assessment[i.key] && assessment[i.key] !== 'belum_bisa')
+      if (hasAbility) return ph
+    }
+    return phases[phases.length - 1]
+  }
+
+  const phaseRecommendations = ACADEMIC_GROUPS.map((group) => {
+    const baseline = getBaselinePhase(group)
+    const areaMap: Record<string, { mata_pelajaran: string; elemen: string }> = {
+      Membaca: { mata_pelajaran: 'Bahasa Indonesia', elemen: 'Membaca dan Memirsa' },
+      Menulis: { mata_pelajaran: 'Bahasa Indonesia', elemen: 'Menulis' },
+      Matematika: { mata_pelajaran: 'Matematika', elemen: 'Bilangan' },
+    }
+    const info = areaMap[group]
+    const adapted = expectedPhase && expectedPhase !== baseline
+    const alasan = adapted
+      ? `Kemampuan pada indikator Fase ${expectedPhase} masih memerlukan banyak bantuan. Target awal disarankan menggunakan Fase ${baseline}, lalu diuji kembali setelah ada kemajuan.`
+      : `Kemampuan yang terlihat sesuai untuk mulai menggunakan target Fase ${baseline} dengan dukungan dan evaluasi berkala.`
+    return { area: group, ...info, fase: baseline, alasan }
+  })
 
   function updateAssessment(key: string, value: AssessmentValue, group: string, phase?: CurriculumPhase) {
     setAssessment((current) => {
