@@ -94,6 +94,7 @@ export default function TambahSiswaPage() {
         setUnlockedPhases({ Membaca: [academicPhase], Menulis: [academicPhase], Matematika: [academicPhase] })
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [academicPhase])
   const allAssessmentItems = useMemo(() => {
     const items: AssessmentItem[] = []
@@ -449,14 +450,27 @@ export default function TambahSiswaPage() {
               <h2 className="text-lg font-bold">{group}{!isAcademic && <span className="ml-2 rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold">Non-akademik</span>}</h2>
               {isAcademic && <div className="mt-2 flex flex-wrap gap-2">{groupPhases.map((ph) => <span key={ph} className={`rounded-full px-3 py-1 text-xs font-bold ${phaseColors[ph] || 'bg-primary/10 text-primary'}`}>{phaseLabels[ph] || `Fase ${ph}`}</span>)}</div>}
               <div className="mt-4 space-y-4">
-                {allAssessmentItems.filter((item) => item.group === group).map((item) => {
-                  const ph = item.phase; const isNewPhase = isAcademic && ph && groupPhases.indexOf(ph) > 0 && allAssessmentItems.filter((i) => i.group === group && i.phase === groupPhases[groupPhases.indexOf(ph) - 1]).every((i) => assessment[i.key] === 'belum_bisa')
-                  return <div key={item.key} className={isNewPhase ? 'mt-6 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/[0.03] p-4' : ''}>
-                    {isNewPhase && <div className="mb-3 text-xs font-bold text-primary">Lanjut ke indikator Fase {item.phase} (semua indikator fase sebelumnya &quot;Belum bisa&quot;)</div>}
-                    <div className="text-sm font-semibold">{item.phase && <span className="mr-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-xs font-bold">{item.phase}</span>}{item.label}</div>
+                {isAcademic ? groupPhases.map((ph, phIdx) => {
+                  const phaseItems = allAssessmentItems.filter((item) => item.group === group && item.phase === ph)
+                  if (phaseItems.length === 0) return null
+                  const isLower = phIdx > 0
+                  const prevPhase = isLower ? groupPhases[phIdx - 1] : null
+                  const prevAllBelumBisa = prevPhase ? allAssessmentItems.filter((i) => i.group === group && i.phase === prevPhase).every((i) => assessment[i.key] === 'belum_bisa') : true
+                  const shouldShow = !isLower || prevAllBelumBisa
+                  if (!shouldShow) return null
+                  return <div key={ph} className={isLower ? 'rounded-2xl border-2 border-dashed border-primary/30 bg-primary/[0.03] p-4 space-y-4' : 'space-y-4'}>
+                    {isLower && <div className="text-xs font-bold text-primary">Lanjut ke indikator Fase {ph} (semua indikator fase sebelumnya &quot;Belum bisa&quot;)</div>}
+                    {phaseItems.map((item) => <div key={item.key}>
+                      <div className="text-sm font-semibold"><span className="mr-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-xs font-bold">{ph}</span>{item.label}</div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">{ASSESSMENT_SCALE.map((option) => <button key={option.value} type="button" onClick={() => updateAssessment(item.key, option.value, group, item.phase)} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${assessment[item.key] === option.value ? 'border-primary bg-primary text-white' : 'border-outline-variant/25 bg-surface-container-low'}`}>{option.label}</button>)}</div>
+                    </div>)}
+                  </div>
+                }) : allAssessmentItems.filter((item) => item.group === group).map((item) => (
+                  <div key={item.key}>
+                    <div className="text-sm font-semibold">{item.label}</div>
                     <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">{ASSESSMENT_SCALE.map((option) => <button key={option.value} type="button" onClick={() => updateAssessment(item.key, option.value, group, item.phase)} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${assessment[item.key] === option.value ? 'border-primary bg-primary text-white' : 'border-outline-variant/25 bg-surface-container-low'}`}>{option.label}</button>)}</div>
                   </div>
-                })}
+                ))}
               </div>
             </section>
           })}
