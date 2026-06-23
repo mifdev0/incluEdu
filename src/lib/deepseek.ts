@@ -27,7 +27,41 @@ export async function deepseekJson<T>(system: string, user: string, maxTokens = 
   const data = await res.json()
   const raw = data.choices?.[0]?.message?.content
   if (!raw) throw new Error('DeepSeek tidak mengembalikan konten')
-  return JSON.parse(raw) as T
+
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    const repaired = raw
+      .replace(/(?<!\\)"(?=\s*[}:,])/g, '\"')
+      .replace(/(?<=[:,\[]\s*)"(?![,\}\]\s])/g, '\"')
+      .replace(/\n(?=(?:[^"]*"[^"]*")*[^"]*$)/g, '\\n')
+      .replace(/\t/g, '\\t')
+      .replace(/\r/g, '\\r')
+    try {
+      return JSON.parse(repaired) as T
+    } catch {
+      const retryRes = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${DEEPSEEK_API_KEY}` },
+        body: JSON.stringify({
+          model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+          messages: [
+            { role: 'system', content: `${system}\nBalas hanya dengan JSON valid. Periksa kembali agar tidak ada karakter yang merusak JSON.` },
+            { role: 'user', content: user },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.1,
+          max_tokens: maxTokens,
+        }),
+        cache: 'no-store',
+      })
+      if (!retryRes.ok) throw new Error(`DeepSeek API error (retry): ${retryRes.status}`)
+      const retryData = await retryRes.json()
+      const retryRaw = retryData.choices?.[0]?.message?.content
+      if (!retryRaw) throw new Error('DeepSeek tidak mengembalikan konten (retry)')
+      return JSON.parse(retryRaw) as T
+    }
+  }
 }
 
 export async function analyzeObservasi(params: {
