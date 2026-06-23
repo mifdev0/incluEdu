@@ -88,10 +88,13 @@ export default function TambahSiswaPage() {
   const [unlockedPhases, setUnlockedPhases] = useState<Record<string, CurriculumPhase[]>>({})
   const ACADEMIC_GROUPS = ['Membaca', 'Menulis', 'Matematika']
   useEffect(() => {
-    if (academicPhase && Object.keys(unlockedPhases).length === 0) {
-      setUnlockedPhases({ Membaca: [academicPhase], Menulis: [academicPhase], Matematika: [academicPhase] })
+    if (academicPhase) {
+      const needsReset = Object.values(unlockedPhases).some((phases) => phases[0] !== academicPhase)
+      if (Object.keys(unlockedPhases).length === 0 || needsReset) {
+        setUnlockedPhases({ Membaca: [academicPhase], Menulis: [academicPhase], Matematika: [academicPhase] })
+      }
     }
-  }, [academicPhase, unlockedPhases])
+  }, [academicPhase])
   const allAssessmentItems = useMemo(() => {
     const items: AssessmentItem[] = []
     for (const [group, phases] of Object.entries(unlockedPhases)) {
@@ -116,26 +119,26 @@ export default function TambahSiswaPage() {
   const phaseRecommendations = recommendCurriculumPhases(assessment, academicPhase)
 
   function updateAssessment(key: string, value: AssessmentValue, group: string, phase?: CurriculumPhase) {
-    setAssessment((current) => ({ ...current, [key]: value }))
-    if (phase && ACADEMIC_GROUPS.includes(group)) {
-      const phases = unlockedPhases[group] || [academicPhase]
-      const lowestPhase = phases[phases.length - 1]
-      const CURRICULUM_PHASES_ORDER: CurriculumPhase[] = ['A', 'B', 'C', 'D', 'E', 'F']
-      const lowestIdx = CURRICULUM_PHASES_ORDER.indexOf(lowestPhase)
-      if (lowestIdx > 0 && value === 'belum_bisa') {
-        const groupItems = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === lowestPhase)
-        const allBelumBisa = groupItems.every((i) => {
-          const val = key === i.key ? value : assessment[i.key]
-          return val === 'belum_bisa'
-        })
-        if (allBelumBisa && !phases.includes(CURRICULUM_PHASES_ORDER[lowestIdx - 1])) {
-          setUnlockedPhases((prev) => ({
-            ...prev,
-            [group]: [...prev[group], CURRICULUM_PHASES_ORDER[lowestIdx - 1]],
-          }))
+    setAssessment((current) => {
+      const next = { ...current, [key]: value }
+      if (phase && ACADEMIC_GROUPS.includes(group)) {
+        const phases = unlockedPhases[group] || [academicPhase]
+        const lowestPhase = phases[phases.length - 1]
+        const ORDER: CurriculumPhase[] = ['A', 'B', 'C', 'D', 'E', 'F']
+        const lowestIdx = ORDER.indexOf(lowestPhase)
+        if (lowestIdx > 0) {
+          const groupItems = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === lowestPhase)
+          const allBelumBisa = groupItems.every((i) => next[i.key] === 'belum_bisa')
+          if (allBelumBisa && !phases.includes(ORDER[lowestIdx - 1])) {
+            setUnlockedPhases((prev) => ({
+              ...prev,
+              [group]: [...prev[group], ORDER[lowestIdx - 1]],
+            }))
+          }
         }
       }
-    }
+      return next
+    })
   }
 
   if (loading || !user) return <FullPageLoading label="Menyiapkan formulir PPI..." />
