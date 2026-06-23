@@ -114,9 +114,36 @@ export default function TambahSiswaPage() {
     for (const item of NON_ACADEMIC_ASSESSMENT_ITEMS) g.add(item.group)
     return Array.from(g)
   }, [unlockedPhases])
+  function getVisiblePhases(group: string, assessmentData: Record<string, AssessmentValue>): CurriculumPhase[] {
+    const phases = unlockedPhases[group] || [academicPhase]
+    const result: CurriculumPhase[] = []
+    for (const ph of phases) {
+      result.push(ph)
+      const items = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === ph)
+      const notAllBelumBisa = items.some((i) => assessmentData[i.key] !== 'belum_bisa')
+      if (notAllBelumBisa) break
+    }
+    return result
+  }
+
+  const visibleItems = useMemo(() => {
+    const items: AssessmentItem[] = []
+    for (const [group] of Object.entries(unlockedPhases)) {
+      const visible = getVisiblePhases(group, assessment)
+      for (const ph of visible) {
+        items.push(...ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === ph))
+      }
+    }
+    for (const item of NON_ACADEMIC_ASSESSMENT_ITEMS) {
+      items.push(item)
+    }
+    return items
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlockedPhases, assessment])
+
   const requiredTeamComplete = ['guru_kelas', 'orang_tua', 'kepala_sekolah'].every((role) => team[role]?.trim())
   const identityComplete = nama.trim() && kelasId && kategori && requiredTeamComplete
-  const assessmentComplete = allAssessmentItems.every((item) => assessment[item.key])
+  const assessmentComplete = visibleItems.every((item) => assessment[item.key])
   const phaseRecommendations = recommendCurriculumPhases(assessment, academicPhase)
 
   function updateAssessment(key: string, value: AssessmentValue, group: string, phase?: CurriculumPhase) {
@@ -124,18 +151,23 @@ export default function TambahSiswaPage() {
       const next = { ...current, [key]: value }
       if (phase && ACADEMIC_GROUPS.includes(group)) {
         const phases = unlockedPhases[group] || [academicPhase]
-        const lowestPhase = phases[phases.length - 1]
         const ORDER: CurriculumPhase[] = ['A', 'B', 'C', 'D', 'E', 'F']
-        const lowestIdx = ORDER.indexOf(lowestPhase)
-        if (lowestIdx > 0) {
-          const groupItems = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === lowestPhase)
-          const allBelumBisa = groupItems.every((i) => next[i.key] === 'belum_bisa')
-          if (allBelumBisa && !phases.includes(ORDER[lowestIdx - 1])) {
-            setUnlockedPhases((prev) => ({
-              ...prev,
-              [group]: [...prev[group], ORDER[lowestIdx - 1]],
-            }))
+        const visible = getVisiblePhases(group, next)
+        const newPhases: CurriculumPhase[] = [phases[0]]
+        for (let i = 1; i < phases.length; i++) {
+          if (!visible.includes(phases[i])) break
+          newPhases.push(phases[i])
+        }
+        const lastVisible = newPhases[newPhases.length - 1]
+        const lastIdx = ORDER.indexOf(lastVisible)
+        if (lastIdx > 0) {
+          const lastItems = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === lastVisible)
+          if (lastItems.every((i) => next[i.key] === 'belum_bisa') && !newPhases.includes(ORDER[lastIdx - 1])) {
+            newPhases.push(ORDER[lastIdx - 1])
           }
+        }
+        if (JSON.stringify(newPhases) !== JSON.stringify(phases)) {
+          setUnlockedPhases((prev) => ({ ...prev, [group]: newPhases }))
         }
       }
       return next
@@ -443,7 +475,7 @@ export default function TambahSiswaPage() {
 
           {groups.map((group) => {
             const isAcademic = ACADEMIC_GROUPS.includes(group)
-            const groupPhases = isAcademic ? (unlockedPhases[group] || [academicPhase]) : []
+            const groupPhases = isAcademic ? getVisiblePhases(group, assessment) : []
             const phaseLabels: Record<string, string> = { A: 'Fase A (Kelas 1-2 SD)', B: 'Fase B (Kelas 3-4 SD)', C: 'Fase C (Kelas 5-6 SD)', D: 'Fase D (SMP)', E: 'Fase E (SMA-10)', F: 'Fase F (SMA 11-12)' }
             const phaseColors: Record<string, string> = { A: 'bg-amber-100 text-amber-800', B: 'bg-blue-100 text-blue-800', C: 'bg-green-100 text-green-800', D: 'bg-purple-100 text-purple-800', E: 'bg-pink-100 text-pink-800', F: 'bg-indigo-100 text-indigo-800' }
             return <section key={group} className="rounded-3xl border border-outline-variant/20 bg-white p-5 sm:p-6">
@@ -451,13 +483,8 @@ export default function TambahSiswaPage() {
               {isAcademic && <div className="mt-2 flex flex-wrap gap-2">{groupPhases.map((ph) => <span key={ph} className={`rounded-full px-3 py-1 text-xs font-bold ${phaseColors[ph] || 'bg-primary/10 text-primary'}`}>{phaseLabels[ph] || `Fase ${ph}`}</span>)}</div>}
               <div className="mt-4 space-y-4">
                 {isAcademic ? groupPhases.map((ph, phIdx) => {
-                  const phaseItems = allAssessmentItems.filter((item) => item.group === group && item.phase === ph)
-                  if (phaseItems.length === 0) return null
+                  const phaseItems = ACADEMIC_ASSESSMENT_ITEMS.filter((i) => i.group === group && i.phase === ph)
                   const isLower = phIdx > 0
-                  const prevPhase = isLower ? groupPhases[phIdx - 1] : null
-                  const prevAllBelumBisa = prevPhase ? allAssessmentItems.filter((i) => i.group === group && i.phase === prevPhase).every((i) => assessment[i.key] === 'belum_bisa') : true
-                  const shouldShow = !isLower || prevAllBelumBisa
-                  if (!shouldShow) return null
                   return <div key={ph} className={isLower ? 'rounded-2xl border-2 border-dashed border-primary/30 bg-primary/[0.03] p-4 space-y-4' : 'space-y-4'}>
                     {isLower && <div className="text-xs font-bold text-primary">Lanjut ke indikator Fase {ph} (semua indikator fase sebelumnya &quot;Belum bisa&quot;)</div>}
                     {phaseItems.map((item) => <div key={item.key}>
@@ -465,7 +492,7 @@ export default function TambahSiswaPage() {
                       <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">{ASSESSMENT_SCALE.map((option) => <button key={option.value} type="button" onClick={() => updateAssessment(item.key, option.value, group, item.phase)} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${assessment[item.key] === option.value ? 'border-primary bg-primary text-white' : 'border-outline-variant/25 bg-surface-container-low'}`}>{option.label}</button>)}</div>
                     </div>)}
                   </div>
-                }) : allAssessmentItems.filter((item) => item.group === group).map((item) => (
+                }) : NON_ACADEMIC_ASSESSMENT_ITEMS.filter((item) => item.group === group).map((item) => (
                   <div key={item.key}>
                     <div className="text-sm font-semibold">{item.label}</div>
                     <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">{ASSESSMENT_SCALE.map((option) => <button key={option.value} type="button" onClick={() => updateAssessment(item.key, option.value, group, item.phase)} className={`rounded-2xl border px-3 py-3 text-sm font-bold ${assessment[item.key] === option.value ? 'border-primary bg-primary text-white' : 'border-outline-variant/25 bg-surface-container-low'}`}>{option.label}</button>)}</div>
