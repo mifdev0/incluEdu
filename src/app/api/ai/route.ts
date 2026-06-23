@@ -66,14 +66,38 @@ Kembalikan JSON dengan kategori, keyakinan, alasan singkat, 2-4 pertanyaan_lanju
         }>
         strategi: string[]
       }>(
-        'Kamu membantu guru menyusun draf Program Pembelajaran Individual sesuai prinsip PPI Kemendikbudristek 2021. Tujuan harus individual, spesifik, terukur, realistis, berdasarkan kekuatan dan kemampuan awal. AI hanya menyusun draf yang wajib ditinjau guru.',
+        'Kamu membantu guru menyusun draf Program Pembelajaran Individual sesuai prinsip PPI Kemendikbudristek 2021. Tujuan harus individual, spesifik, terukur, realistis, berdasarkan kekuatan dan kemampuan awal. AI hanya menyusun draf yang wajib ditinjau guru. Sesuaikan aktivitas, media, dan pelaksana dengan kategori hambatan siswa (misal: tunanetra → media braille/audio, tunarungu → visual/isyarat, ADHD → struktur pendek dan penguatan positif, slow learner → pengulangan dan bertahap).',
         `Profil siswa: ${JSON.stringify(body.student)}
 Asesmen awal: ${JSON.stringify(body.baseline)}
 Susun satu tujuan jangka panjang, 3-5 tujuan jangka pendek, dan strategi pembelajaran. Nilai tujuan_jangka_panjang WAJIB berupa satu string/kalimat, bukan object atau array.
 WAJIB sertakan minimal satu target non_akademik berdasarkan kebutuhan sikap belajar, sosial-emosional, bina diri, atau motorik pada asesmen. Target akademik dan non-akademik harus dipisahkan.
 Untuk target akademik, ikuti rekomendasi fase kemampuan pada input meskipun berbeda dari fase kelas administratif.
-Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akademik), mata_pelajaran, fase_adaptasi, elemen_cp, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati.`
+WAJIB: sesuaikan aktivitas, media alat, dan pelaksana dengan kategori siswa (${body.student?.kategori || '—'}). Contoh: tunanetra → media braille/audio, tunarungu → visual/isyarat, ADHD → sesi pendek + penguatan positif, slow learner → bertahap dengan pengulangan.
+Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akademik), mata_pelajaran, fase_adaptasi, elemen_cp, tujuan, indikator terukur, target 0-100, aktivitas pembelajaran, media_alat, pelaksana, frekuensi, metode_evaluasi, dan 2-5 langkah_tugas kecil yang dapat diamati. JANGAN biarkan aktivitas, media_alat, pelaksana, atau frekuensi kosong.`
       )
+      const kategori = body.student?.kategori || ''
+      const fallbackAktivitas: Record<string, string> = {
+        tunanetra: 'Latihan dengan media braille atau audio secara bertahap',
+        tunarungu: 'Latihan dengan media visual dan isyarat secara terstruktur',
+        adhd: 'Latihan dalam sesi pendek dengan penguatan positif dan jeda',
+        slow_learner: 'Latihan bertahap dengan pengulangan dan contoh konkret',
+        disleksia: 'Latihan multisensori dengan pendampingan intensif',
+        autisme: 'Latihan terstruktur dengan jadwal visual dan instruksi jelas',
+        hambatan_intelektual: 'Latihan sederhana berulang dengan bantuan langsung',
+        hambatan_motorik: 'Latihan gerak dengan alat bantu dan modifikasi aktivitas',
+        hambatan_komunikasi: 'Latihan komunikasi dengan media alternatif dan isyarat',
+      }
+      const fallbackMedia: Record<string, string> = {
+        tunanetra: 'Media braille, audio, dan benda konkret',
+        tunarungu: 'Media visual, kartu bergambar, dan teks',
+        adhd: 'Timer visual, jadwal bergambar, dan stiker reward',
+        slow_learner: 'Media konkret, lembar kerja bertahap, dan contoh langsung',
+        disleksia: 'Kartu huruf timbul, media multisensori, dan buku bertahap',
+        autisme: 'Jadwal visual, kartu instruksi, dan benda konkret',
+        hambatan_intelektual: 'Benda konkret, kartu bergambar, dan alat peraga',
+        hambatan_motorik: 'Alat bantu gerak, alas empuk, dan bola',
+        hambatan_komunikasi: 'Kartu bergambar, papan komunikasi, dan boneka tangan',
+      }
       const goals = (Array.isArray(result.tujuan_jangka_pendek) ? result.tujuan_jangka_pendek : [])
         .map((goal) => {
           const tujuan = String(goal.tujuan || '')
@@ -88,8 +112,8 @@ Setiap tujuan jangka pendek wajib memuat: area, jenis_target (akademik/non_akade
             tujuan,
             indikator: indikator || tujuan,
             target: Math.min(100, Math.max(0, Number(goal.target) || 70)),
-            aktivitas: String(goal.aktivitas || ''),
-            media_alat: String(goal.media_alat || ''),
+            aktivitas: String(goal.aktivitas || fallbackAktivitas[kategori] || 'Latihan bertahap sesuai kebutuhan siswa'),
+            media_alat: String(goal.media_alat || fallbackMedia[kategori] || 'Media pembelajaran sesuai kebutuhan'),
             pelaksana: String(goal.pelaksana || 'Guru kelas'),
             frekuensi: String(goal.frekuensi || 'Disesuaikan jadwal pembelajaran'),
             metode_evaluasi: String(goal.metode_evaluasi || 'Observasi kinerja'),
