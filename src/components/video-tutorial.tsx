@@ -22,7 +22,7 @@ export function VideoTutorial() {
   const [open, setOpen] = useState<number | null>(null)
 
   return (
-    <section className="py-14 sm:py-xl bg-white">
+    <section id="tutorial" className="py-14 sm:py-xl bg-white">
       <div className="max-w-container-max mx-auto px-4 sm:px-gutter">
         <div className="max-w-xl mx-auto text-center">
           <span className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.14em] text-primary">PANDUAN VIDEO</span>
