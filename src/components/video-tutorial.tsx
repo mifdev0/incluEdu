@@ -7,7 +7,7 @@ const tutorials = [
   {
     id: 1,
     title: 'Cara Membuat Akun IncluEdu',
-    url: 'https://www.youtube.com/embed/t8GbAKqq7Y8',
+    url: 'https://www.youtube.com/embed/m5e7fH8mFDA',
     available: true,
   },
   { id: 2, title: 'Cara Membuat Kelas & Menambahkan Siswa', url: '', available: false },
