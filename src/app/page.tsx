@@ -16,7 +16,7 @@ export default function Home() {
             <a href="/login" className="px-3 sm:px-5 py-2.5 rounded-full font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">Masuk</a>
             <a href="/register" className="bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-4 sm:px-gutter py-2.5 rounded-full font-label-md text-label-md shadow-sm inline-block whitespace-nowrap">
               <span className="sm:hidden">Daftar</span>
-              <span className="hidden sm:inline">Coba Sekarang</span>
+              <span className="hidden sm:inline">Daftar</span>
             </a>
           </div>
         </nav>
