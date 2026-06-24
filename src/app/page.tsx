@@ -1,5 +1,6 @@
 import { ClipboardList, FileText, ArrowRight, Check, Target, BarChart3, ChevronRight, UsersRound, FileSignature, GraduationCap } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
+import { NavAuth } from '@/components/nav-auth'
 
 export default function Home() {
   return (
@@ -12,13 +13,7 @@ export default function Home() {
             <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#fitur">Fitur</a>
             <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#tentang">Tentang</a>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-3">
-            <a href="/login" className="px-3 sm:px-5 py-2.5 rounded-full font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors">Masuk</a>
-            <a href="/register" className="bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-4 sm:px-gutter py-2.5 rounded-full font-label-md text-label-md shadow-sm inline-block whitespace-nowrap">
-              <span className="sm:hidden">Daftar</span>
-              <span className="hidden sm:inline">Daftar</span>
-            </a>
-          </div>
+          <NavAuth />
         </nav>
       </header>
 

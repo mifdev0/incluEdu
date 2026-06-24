@@ -73,6 +73,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#FAFAF5]">
       <header className="app-header">
         <nav className="app-nav">
+          <a href="/" className="text-on-surface-variant font-label-md text-label-md mr-2">← Beranda</a>
           <a href="/dashboard" aria-label="IncluEdu - Dashboard"><BrandLogo compact mobileIconOnly /></a>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 pr-3 border-r border-outline-variant/30">
