@@ -1,6 +1,7 @@
 import { ClipboardList, FileText, ArrowRight, Check, Target, BarChart3, ChevronRight, UsersRound, FileSignature, GraduationCap } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 import { NavAuth } from '@/components/nav-auth'
+import { VideoTutorial } from '@/components/video-tutorial'
 
 export default function Home() {
   return (
@@ -216,6 +217,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <VideoTutorial />
       </main>
 
       {/* Footer */}
