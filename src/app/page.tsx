@@ -61,20 +61,19 @@ export default function Home() {
         </section>
 
         {/* How it works */}
-        <section className="max-w-container-max mx-auto px-4 sm:px-gutter py-12 sm:py-xl" id="fitur">
-          <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-lg items-start">
-            <div className="lg:sticky lg:top-32">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="h-px w-12 bg-primary" />
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-on-surface-variant">Cara kerja</span>
-              </div>
-              <h2 className="font-display text-[26px] leading-[1.18] sm:text-[34px] md:text-display-lg text-on-surface mb-3 sm:mb-md">
-                Satu alur sederhana untuk mendampingi setiap siswa.
-              </h2>
-              <p className="text-sm leading-6 sm:text-body-lg text-on-surface-variant max-w-lg">
-                Dari asesmen awal sampai laporan akhir, setiap data tersambung dalam satu alur PPI yang dapat ditinjau guru dan Tim PPI.
-              </p>
-            </div>
+        <section className="max-w-container-max mx-auto px-4 sm:px-gutter py-12 sm:py-xl text-center" id="fitur">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span className="h-px w-12 bg-primary" />
+            <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-on-surface-variant">Cara kerja</span>
+            <span className="h-px w-12 bg-primary" />
+          </div>
+          <h2 className="font-display text-[26px] leading-[1.18] sm:text-[34px] md:text-display-lg text-on-surface mb-3 sm:mb-md max-w-2xl mx-auto">
+            Satu alur sederhana untuk mendampingi setiap siswa.
+          </h2>
+          <p className="text-sm leading-6 sm:text-body-lg text-on-surface-variant max-w-xl mx-auto mb-8 sm:mb-lg">
+            Dari asesmen awal sampai laporan akhir, setiap data tersambung dalam satu alur PPI yang dapat ditinjau guru dan Tim PPI.
+          </p>
+          <div className="text-left">
 
             <div className="relative space-y-md">
               <div className="hidden md:block absolute left-8 top-16 bottom-16 w-px bg-gradient-to-b from-primary via-secondary to-tertiary opacity-30" />
@@ -148,9 +147,9 @@ export default function Home() {
         </section>
 
         {/* Product workflow */}
-        <section className="bg-[#241A36] py-14 sm:py-xl text-white" id="tentang">
+        <section className="bg-[#241A36] py-14 sm:py-xl text-white text-center" id="tentang">
           <div className="max-w-container-max mx-auto px-4 sm:px-gutter">
-            <div className="max-w-2xl">
+            <div className="max-w-2xl mx-auto">
               <span className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.14em] text-primary-fixed-dim">Yang dihasilkan IncluEdu</span>
               <h2 className="font-display text-[25px] leading-[1.18] sm:text-display-lg-mobile mt-2 sm:mt-3">
                 Bukan sekadar catatan, tetapi program yang dapat dijalankan dan dipertanggungjawabkan.

@@ -24,7 +24,7 @@ export function VideoTutorial() {
   return (
     <section className="py-14 sm:py-xl bg-white">
       <div className="max-w-container-max mx-auto px-4 sm:px-gutter">
-        <div className="max-w-2xl">
+        <div className="max-w-xl mx-auto text-center">
           <span className="text-[10px] sm:text-sm font-bold uppercase tracking-[0.14em] text-primary">PANDUAN VIDEO</span>
           <h2 className="font-display text-[25px] leading-[1.18] sm:text-display-lg-mobile mt-2 sm:mt-3">
             Tutorial Penggunaan IncluEdu
@@ -34,7 +34,7 @@ export function VideoTutorial() {
           </p>
         </div>
 
-        <div className="mt-8 sm:mt-10 max-w-2xl space-y-3">
+        <div className="mt-8 sm:mt-10 max-w-2xl mx-auto space-y-3">
           {tutorials.map((item) => (
             <div key={item.id} className="rounded-2xl border border-outline-variant/20 overflow-hidden">
               <button
