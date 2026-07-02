@@ -13,6 +13,7 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-lg">
             <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#fitur">Fitur</a>
             <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#tutorial">Tutorial</a>
+            <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="/panduan-ppi">Panduan PPI</a>
             <a className="text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md" href="#tentang">Tentang</a>
           </div>
           <NavAuth />
