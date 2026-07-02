@@ -1,6 +1,7 @@
-import { FileDown, CheckCircle2, ArrowRight } from 'lucide-react'
+import { FileDown, CheckCircle2 } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 import { NavAuth } from '@/components/nav-auth'
+import { CtaButton } from '@/components/cta-button'
 
 export default function PanduanPpiPage() {
   return (
@@ -78,9 +79,7 @@ export default function PanduanPpiPage() {
           </section>
 
           <div className="text-center">
-            <a href="/register" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-white">
-              Mulai Gunakan IncluEdu <ArrowRight className="w-5 h-5" />
-            </a>
+            <CtaButton />
           </div>
         </div>
       </main>

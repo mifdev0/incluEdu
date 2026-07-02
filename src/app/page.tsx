@@ -1,7 +1,8 @@
-import { ClipboardList, FileText, ArrowRight, Check, Target, BarChart3, ChevronRight, UsersRound, FileSignature, GraduationCap } from 'lucide-react'
+import { ClipboardList, FileText, Check, Target, BarChart3, ChevronRight, UsersRound, FileSignature, GraduationCap } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 import { NavAuth } from '@/components/nav-auth'
 import { VideoTutorial } from '@/components/video-tutorial'
+import { CtaButton } from '@/components/cta-button'
 
 export default function Home() {
   return (
@@ -54,10 +55,7 @@ export default function Home() {
               Bantu guru menyusun, menyepakati, menjalankan, dan mengevaluasi Program Pembelajaran Individual berdasarkan kemampuan nyata setiap siswa.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-md">
-              <a href="/register" className="w-full sm:w-auto bg-primary hover:scale-105 active:scale-95 transition-all text-on-primary px-6 sm:px-lg py-3.5 sm:py-4 rounded-full text-sm font-bold shadow-lg flex items-center justify-center gap-2">
-                Coba Sekarang
-                <ArrowRight className="w-5 h-5" />
-              </a>
+              <CtaButton />
             </div>
           </div>
         </section>
